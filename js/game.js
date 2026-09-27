@@ -26,6 +26,7 @@ var SM = window.SM || (window.SM = {});
       else { v = t30(base + y) - sub; if (v < 0) v = 0xFF; }
       SM.Render.pal[y] = v & 0x3F;
     }
+    SM.Render.mirrorPal();
     ram[0x333]++;
   };
   G.palFade = function () {          // $D557: un paso cada 4 cuadros
@@ -147,9 +148,9 @@ var SM = window.SM || (window.SM = {});
   };
 
   // ---------- inicio de partida / de acto ----------
-  G.newGame = function () {
+  G.newGame = function (zone, act) {
     for (var i = 0; i < 0x800; i++) ram[i] = 0;
-    ram[R.ZONE] = 0; ram[R.ACT] = 0;
+    ram[R.ZONE] = zone || 0; ram[R.ACT] = act || 0;
     ram[R.LIVES] = 5;
     G.startAct();
   };

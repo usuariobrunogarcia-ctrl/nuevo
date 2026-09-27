@@ -20,6 +20,7 @@ var SM = window.SM || (window.SM = {});
     for (i = 0; i < 22; i++) nt[9 * 32 + 4 + i] = T(0x8AB4 + i);
     for (i = 0; i < 22; i++) nt[10 * 32 + 4 + i] = T(0x8AB4 + 22 + i);
     for (i = 0; i < 32; i++) SM.Render.pal[i] = T(0x891C + i) & 0x3F;
+    SM.Render.mirrorPal();
     // $85A8: posiciones iniciales de los sprites
     for (i = 0; i < 12; i++) ram[0x606 + i] = T(0x85FC + i);
     ram[R.IRQMODE] = 2;

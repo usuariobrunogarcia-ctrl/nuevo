@@ -90,7 +90,7 @@ SM.Render = {
     }
   },
   // Franja de un nametable (32x30) con scroll horizontal; fuera del nametable se ve el
-  // tile 'blank'. Filas de pantalla [y0,y1). ox: margen izquierdo de la pantalla lógica.
+  // tile 'blank' (blank < 0: el nametable se repite, espejado horizontal). Filas de pantalla [y0,y1). ox: margen izquierdo de la pantalla lógica.
   drawNTRows: function (nt, attr, banks, scrollX, y0, y1, ox, blank) {
     var rom = SM.rom, W = this.W, fb = this.fb, op = this.bgop;
     var colors = [];
@@ -100,7 +100,7 @@ SM.Render = {
       for (var sx = 0; sx < 256; sx++) {
         var xx = sx + ox;
         if (xx < 0 || xx >= W) continue;
-        var wx = (sx + scrollX) & 511;
+        var wx = (sx + scrollX) & (blank < 0 ? 255 : 511);
         var t, pa = 0;
         if (wx < 256) {
           var tx = wx >> 3;
@@ -112,6 +112,11 @@ SM.Render = {
         if (c) { fb[row + xx] = colors[pa | c]; op[row + xx] = 1; }
       }
     }
+  },
+  // $3F10/$14/$18/$1C son espejos de $3F00/$04/$08/$0C: al subir los 32 bytes de la
+  // paleta, los bytes 16/20/24/28 pisan a los 0/4/8/12.
+  mirrorPal: function () {
+    for (var i = 0; i < 16; i += 4) this.pal[i] = this.pal[16 + i];
   },
   clear: function () {
     this.fb.fill(this.rgba(this.pal[0])); this.bgop.fill(0);

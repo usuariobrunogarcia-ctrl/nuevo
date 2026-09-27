@@ -57,6 +57,7 @@ var SM = window.SM || (window.SM = {});
         if (ram[R.NX_HI] === 0x18 && ram[R.NX_LO] >= 0x10) {
           ram[0xB8] = 2;
           for (var k = 0; k < 8; k++) SM.Render.pal[0x18 + k] = TZ(0x9833 + k) & 0x3F;
+          SM.Render.mirrorPal();
           ram[R.CHR1] = TZ(0x96B9 + ram[R.ZONE]);
         }
         return;
