@@ -11,7 +11,6 @@ var SM = window.SM || (window.SM = {});
   var nt = new Uint8Array(960), attr = new Uint8Array(64), done = null;
 
   ZC.start = function (cb) {
-    done = cb;
     // $8500: textos en el nametable y paleta
     nt.fill(0xFF); attr.fill(0);
     var z = ram[R.ZONE], p = W(0x893C + z * 2), i;
@@ -21,15 +20,26 @@ var SM = window.SM || (window.SM = {});
     for (i = 0; i < 22; i++) nt[10 * 32 + 4 + i] = T(0x8AB4 + 22 + i);
     for (i = 0; i < 32; i++) SM.Render.pal[i] = T(0x891C + i) & 0x3F;
     SM.Render.mirrorPal();
+    ram[0x02] = 0xF0; ram[0x34D] = 0xF0;
+    ram[R.MUSIC] = T(0x83EF + z);
+    ZC.run(nt, attr, null, cb);
+  };
+
+  // Escena común del cartel y de la pantalla de resultados: textos que entran con scroll
+  // partido (IRQ modo 2) y los metasprites "SOMARI" / "ACT" / número.
+  // extra: función del estado 3 (resultados, $924B) o null (cartel).
+  var curNt, curAttr, extra;
+  ZC.run = function (n, a, ex, cb) {
+    curNt = n; curAttr = a; extra = ex; done = cb;
     // $85A8: posiciones iniciales de los sprites
-    for (i = 0; i < 12; i++) ram[0x606 + i] = T(0x85FC + i);
+    for (var i = 0; i < 12; i++) ram[0x606 + i] = T(0x85FC + i);
     ram[R.IRQMODE] = 2;
-    ram[0x02] = 0xF0; ram[0x34D] = 0xF0; ram[0x86] = 0;
+    ram[0x86] = 0;
     ram[R.CHR0] = 0x70; ram[R.CHR2] = 0x70; ram[R.CHR3] = 0x71;
     ram[R.CHR1] = 0x72; ram[R.CHR4] = 0x72; ram[R.CHR5] = 0x72;
-    ram[R.MUSIC] = T(0x83EF + z);
     SM.Game.scene = step;
   };
+  ZC.T = T; ZC.W = W;
 
   // $8733: metasprite genérico
   function meta(xa, ya, cols, rows, tiles, attrs) {
@@ -50,7 +60,10 @@ var SM = window.SM || (window.SM = {});
 
   function step() {
     SM.Game.nmi();
-    switch (ram[0x86]) {
+    var k = ram[0x86];
+    if (extra && k >= 3) k = k === 3 ? -1 : k - 1;          // resultados: $924B es el estado 3
+    switch (k) {
+      case -1: extra(); break;
       case 0: {                                               // $840E
         var a = ram[0x02] - 0x10; ram[0x02] = a < 0 ? 0 : a;
         var b = ram[0x606] - 0x10; ram[0x606] = b & 0xFF; if (b < 0) ram[0x607]--;
@@ -90,13 +103,14 @@ var SM = window.SM || (window.SM = {});
       meta(0x60E, 0x610, 2, 3, W(0x88C3 + (ram[R.ACT] + 2) * 2), W(0x88C3 + 10));
     }
     meta(0x606, 0x608, 7, 8, W(0x88C3), W(0x88C3 + 10));
-    var Rn = SM.Render, ox = (Rn.W - 256) >> 1, banks = [0x70, 0x71, 0x72, 0x72];
+    var Rn = SM.Render, ox = (Rn.W - 256) >> 1,
+      banks = [ram[R.CHR2], ram[R.CHR3], ram[R.CHR4], ram[R.CHR5]];
     Rn.clear();
-    Rn.drawNTRows(nt, attr, banks, ram[0x02], 0, 73, ox, 0xFF);
-    Rn.drawNTRows(nt, attr, banks, ram[0x34D], 73, 122, ox, 0xFF);
-    Rn.drawNTRows(nt, attr, banks, 0, 122, 240, ox, 0xFF);
-    Rn.drawSprites([0x70, 0x71, 0x72, 0x73], 0);
-    if (ram[0x86] >= 5) {
+    Rn.drawNTRows(curNt, curAttr, banks, ram[0x02], 0, 73, ox, 0xFF);
+    Rn.drawNTRows(curNt, curAttr, banks, ram[0x34D], 73, 122, ox, 0xFF);
+    Rn.drawNTRows(curNt, curAttr, banks, 0, 122, 240, ox, 0xFF);
+    Rn.drawSprites([ram[R.CHR0], ram[R.CHR0] + 1, ram[R.CHR1], ram[R.CHR1] + 1], 0);
+    if (ram[0x86] >= (extra ? 6 : 5)) {
       ram[R.IRQMODE] = 0;
       var cb = done; done = null;
       if (cb) cb();
