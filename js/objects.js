@@ -78,7 +78,12 @@ var SM = window.SM || (window.SM = {});
   function remove(x) { ram[TYPE + x] = 0; }       // $8CC8
 
   // $8A31: contacto con el jugador; $9F/$A0 = tamaño, $9E = tipo de contacto
+  // En la vista panorámica un objeto puede seguir activo a 256 px o más del jugador
+  // (SXH distinto de $00/$FF). Las comprobaciones de contacto del original sólo miran el
+  // byte bajo, así que a esa distancia darían falsos contactos.
+  function far(x) { var h = ram[SXH + x]; return h !== 0 && h !== 0xFF; }
   function touch(x) {
+    if (far(x)) return;
     if (!(ram[SXH + x] & 0x80)) { if (ram[SXL + x] >= 8) return; }
     else {
       var s = ram[SXL + x] + ram[W9F];
@@ -364,6 +369,7 @@ var SM = window.SM || (window.SM = {});
   };
   // $8A89
   function monitor(x) {
+    if (far(x)) return;
     if (!(ram[SYH + x] & 0x80)) return;
     var y = 0, d = ram[SYL + x];
     if (d < 0xF9) { if (d < 0xE8) return; y = 1; }
@@ -677,6 +683,10 @@ var SM = window.SM || (window.SM = {});
       var t = ram[TYPE + x];
       if (!t) break;
       var f = U[t];
+      // Vista panorámica: fuera del rango del original el objeto no existiría; aquí se
+      // mantiene visible pero en pausa (salvo proyectiles y plataformas, que tienen su
+      // propio control de distancia).
+      if (Obj.extra && !MOVERS[t] && relPos(x) && far(x)) continue;
       if (f) f(x); else if (!Obj.warned[t]) { Obj.warned[t] = 1; console.warn('objeto sin portar', t.toString(16)); }
     }
     if (ram[R.WATER] >= 0x3C && ram[R.STATE] !== 9) die();
@@ -684,6 +694,7 @@ var SM = window.SM || (window.SM = {});
     Obj.compact();
   };
   Obj.warned = {};
+  var MOVERS = { 0x0F: 1, 0x16: 1, 0x1A: 1, 0x1B: 1, 0x1C: 1, 0x2B: 1 };
   // $A3ED
   Obj.compact = function () {
     var n = ram[R.OBJ_N], x = 0;
