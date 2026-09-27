@@ -47,6 +47,8 @@ SM.Render = {
         if (xh >= L.width) continue;
         var m = L.metatileDraw(xh, xl, yh, yl);
         var t = L.mtTiles[m * 4 + ((yl & 8) ? 2 : 0) + ((xl & 8) ? 1 : 0)];
+        var ed = SM.BgEdit ? SM.BgEdit.get(tx >> 3, ty >> 3) : -1;
+        if (ed >= 0) t = ed;
         var pa = L.mtAttr[m] << 2;
         var px = rom.tile(banks[t >> 6], t);
         var sx = tx - vx, sy = ty - vy;

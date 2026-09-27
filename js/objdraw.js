@@ -177,6 +177,15 @@ var SM = window.SM || (window.SM = {});
   H[0x2F] = function (x) {
     if (grid(x, 5, 6, ram[O.P + x] ? 0x1E : 0, 0, 5, tbl(0xAF8D), 1, true)) ram[R.CHR1] = 0x80;
   };
+  // $B029: tipo 60 (explosiones del jefe)
+  H[0x60] = function (x) {
+    var p = ram[O.P + x], f = p & 3, k = (p >> 2) & 7;
+    var a = ram[O.SXL + x] + T(0xB165 + k);
+    ram[O.SXL + x] = a & 0xFF; ram[O.SXH + x] = (ram[O.SXH + x] + (a > 0xFF ? 1 : 0)) & 0xFF;
+    var b = ram[O.SYL + x] + T(0xB16D + k);
+    ram[O.SYL + x] = b & 0xFF; ram[O.SYH + x] = (ram[O.SYH + x] + (b > 0xFF ? 1 : 0)) & 0xFF;
+    if (grid(x, 2, 2, T(0xB14D + f), 0, 2, tbl(0xB155), T(0xB151 + f), true) && !(ram[R.FRAME] & 0x0F)) ram[R.SFX] = 9;
+  };
   // $8000 del banco $12: recorre los objetos (sentido alternado cada cuadro)
   D.drawAll = function () {
     var n = ram[R.OBJ_N], x;
