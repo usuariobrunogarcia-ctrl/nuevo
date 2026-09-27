@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Somari — World 1</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: system-ui, sans-serif; color: #ddd; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #screen { image-rendering: pixelated; image-rendering: crisp-edges; background: #000; display: block; }
+  #bar { position: fixed; top: 6px; right: 8px; display: flex; gap: 6px; opacity: .35; transition: opacity .2s; z-index: 5; }
+  #bar:hover { opacity: 1; }
+  #bar button { background: #222c; color: #eee; border: 1px solid #555; border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  #help { position: fixed; left: 8px; bottom: 6px; font-size: 11px; opacity: .45; pointer-events: none; }
+  #loader { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: #111; text-align: center; padding: 16px; }
+  #loader label { border: 1px dashed #777; border-radius: 10px; padding: 22px 28px; cursor: pointer; max-width: 420px; line-height: 1.5; }
+  #loader input { display: none; }
+  #touch { position: fixed; inset: 0; pointer-events: none; display: none; }
+  #touch div { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; background: #fff2; border: 1px solid #fff4; color: #fffa; display: flex; align-items: center; justify-content: center; font-size: 15px; user-select: none; -webkit-user-select: none; }
+  @media (pointer: coarse) { #touch { display: block; } #help { display: none; } }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="screen" width="256" height="240"></canvas></div>
+<div id="bar">
+  <button id="aspect" title="Tecla P / F2">Vista</button>
+  <button onclick="SM.Sound && SM.Sound.toggleMute()" title="Tecla M">Sonido</button>
+</div>
+<div id="help">Flechas: mover · Z/Espacio: saltar (A) · X: B · Enter: Start · P: vista panorámica · M: sonido</div>
+<div id="loader">
+  <div>No se pudo leer el ROM automáticamente.</div>
+  <label for="romfile">Elegí o arrastrá aquí el archivo<br><b>Somari (Asia) (En) (v1.1) (Pirate).nes</b><br><small>Los gráficos, niveles y tablas del juego se leen del ROM.</small></label>
+  <input id="romfile" type="file" accept=".nes">
+</div>
+<div id="touch">
+  <div data-btn="LEFT" style="left:16px;bottom:70px">◀</div>
+  <div data-btn="RIGHT" style="left:120px;bottom:70px">▶</div>
+  <div data-btn="UP" style="left:68px;bottom:122px">▲</div>
+  <div data-btn="DOWN" style="left:68px;bottom:18px">▼</div>
+  <div data-btn="B" style="right:100px;bottom:40px">B</div>
+  <div data-btn="A" style="right:20px;bottom:70px">A</div>
+  <div data-btn="START" style="right:60px;top:60px;width:70px;height:34px;border-radius:17px">START</div>
+</div>
+<script src="js/rom.js"></script>
+<script src="js/ram.js"></script>
+<script src="js/level.js"></script>
+<script src="js/render.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/collision.js"></script>
+<script src="js/player.js"></script>
+<script src="js/objects.js"></script>
+<script src="js/objdraw.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/game.js"></script>
+<script src="js/stubs.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
