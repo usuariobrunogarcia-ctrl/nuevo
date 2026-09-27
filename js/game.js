@@ -62,6 +62,7 @@ var SM = window.SM || (window.SM = {});
     ram[R.FRAME]++;
     SM.Sound && SM.Sound.update();
   }
+  G.nmi = nmi;
   G.nmiInput = function () {
     var prev = ram[0x304];
     ram[R.JOY] = G.joy;

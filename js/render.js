@@ -89,6 +89,33 @@ SM.Render = {
       }
     }
   },
+  // Franja de un nametable (32x30) con scroll horizontal; fuera del nametable se ve el
+  // tile 'blank'. Filas de pantalla [y0,y1). ox: margen izquierdo de la pantalla lógica.
+  drawNTRows: function (nt, attr, banks, scrollX, y0, y1, ox, blank) {
+    var rom = SM.rom, W = this.W, fb = this.fb, op = this.bgop;
+    var colors = [];
+    for (var i = 0; i < 16; i++) colors.push(this.rgba((i & 3) ? this.pal[i] : this.pal[0]));
+    for (var y = y0; y < y1 && y < 240; y++) {
+      var row = y * W, ty = y >> 3, fy = y & 7;
+      for (var sx = 0; sx < 256; sx++) {
+        var xx = sx + ox;
+        if (xx < 0 || xx >= W) continue;
+        var wx = (sx + scrollX) & 511;
+        var t, pa = 0;
+        if (wx < 256) {
+          var tx = wx >> 3;
+          t = nt[ty * 32 + tx];
+          var a = attr[(ty >> 2) * 8 + (tx >> 2)];
+          pa = ((a >> (((ty & 2) << 1) | (tx & 2))) & 3) << 2;
+        } else t = blank;
+        var c = rom.tile(banks[t >> 6], t)[fy * 8 + (wx & 7)];
+        if (c) { fb[row + xx] = colors[pa | c]; op[row + xx] = 1; }
+      }
+    }
+  },
+  clear: function () {
+    this.fb.fill(this.rgba(this.pal[0])); this.bgop.fill(0);
+  },
   // Sprites desde SM.Spr (orden de prioridad NES: la entrada 0 queda encima).
   // ox = desplazamiento de la pantalla lógica dentro de la vista.
   // sprBanks = bancos de 1 KB para los tiles $00-$3F,$40-$7F,$80-$BF,$C0-$FF.
