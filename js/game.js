@@ -26,6 +26,7 @@ var SM = window.SM || (window.SM = {});
       else { v = t30(base + y) - sub; if (v < 0) v = 0xFF; }
       SM.Render.pal[y] = v & 0x3F;
     }
+    SM.Render.mirrorPal();
     ram[0x333]++;
   };
   G.palFade = function () {          // $D557: un paso cada 4 cuadros
@@ -62,6 +63,7 @@ var SM = window.SM || (window.SM = {});
     ram[R.FRAME]++;
     SM.Sound && SM.Sound.update();
   }
+  G.nmi = nmi;
   G.nmiInput = function () {
     var prev = ram[0x304];
     ram[R.JOY] = G.joy;
@@ -146,9 +148,9 @@ var SM = window.SM || (window.SM = {});
   };
 
   // ---------- inicio de partida / de acto ----------
-  G.newGame = function () {
+  G.newGame = function (zone, act) {
     for (var i = 0; i < 0x800; i++) ram[i] = 0;
-    ram[R.ZONE] = 0; ram[R.ACT] = 0;
+    ram[R.ZONE] = zone || 0; ram[R.ACT] = act || 0;
     ram[R.LIVES] = 5;
     G.startAct();
   };
@@ -290,8 +292,15 @@ var SM = window.SM || (window.SM = {});
       case 1: SM.Title.continueScreen(); break;
       case 2: ram[R.MUSIC] = 0; G.startAct(); break;
       case 3: SM.Title.start(); break;
-      case 4: SM.Results.start(function () { G.startAct(); }); break;
-      case 5: SM.Results.zoneClear(); break;
+      case 4:
+        SM.Results.start(function () {
+          // el port incluye sólo el Mundo 1 (Green Hill y su etapa especial): al pasar a
+          // la zona siguiente se muestra el final
+          if (ram[R.ZONE] !== 0 && ram[R.ZONE] !== 7) SM.TheEnd.start();
+          else G.startAct();
+        });
+        break;
+      case 5: SM.TheEnd.start(); break;
     }
   }
 

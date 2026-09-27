@@ -613,6 +613,12 @@ var SM = window.SM || (window.SM = {});
       ram[TYPE + x] = 0;
     }
   };
+  // ---- $8CB8: tipo 60 (explosiones del jefe) ----
+  U[0x60] = function (x) {
+    relPos(x);
+    ram[P + x]++;
+    if (ram[P + x] & 0x80) ram[TYPE + x] = 0;
+  };
   Obj.U = U;
 
   // ---- $A029: aparición de objetos de los 8 chunks vecinos ----

@@ -10,6 +10,8 @@ SM.Render = {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.pal = new Uint8Array(32);      // equivalente a la RAM de paleta de la PPU
+    this.lineCnt = new Uint8Array(240);
+    this.lineDrop = new Uint8Array(64 * 256);
     this.resize(256);
   },
   resize: function (w) {
@@ -47,6 +49,8 @@ SM.Render = {
         if (xh >= L.width) continue;
         var m = L.metatileDraw(xh, xl, yh, yl);
         var t = L.mtTiles[m * 4 + ((yl & 8) ? 2 : 0) + ((xl & 8) ? 1 : 0)];
+        var ed = SM.BgEdit ? SM.BgEdit.get(tx >> 3, ty >> 3) : -1;
+        if (ed >= 0) t = ed;
         var pa = L.mtAttr[m] << 2;
         var px = rom.tile(banks[t >> 6], t);
         var sx = tx - vx, sy = ty - vy;
@@ -87,6 +91,38 @@ SM.Render = {
       }
     }
   },
+  // Franja de un nametable (32x30) con scroll horizontal; fuera del nametable se ve el
+  // tile 'blank' (blank < 0: el nametable se repite, espejado horizontal). Filas de pantalla [y0,y1). ox: margen izquierdo de la pantalla lógica.
+  drawNTRows: function (nt, attr, banks, scrollX, y0, y1, ox, blank) {
+    var rom = SM.rom, W = this.W, fb = this.fb, op = this.bgop;
+    var colors = [];
+    for (var i = 0; i < 16; i++) colors.push(this.rgba((i & 3) ? this.pal[i] : this.pal[0]));
+    for (var y = y0; y < y1 && y < 240; y++) {
+      var row = y * W, ty = y >> 3, fy = y & 7;
+      for (var sx = 0; sx < 256; sx++) {
+        var xx = sx + ox;
+        if (xx < 0 || xx >= W) continue;
+        var wx = (sx + scrollX) & (blank < 0 ? 255 : 511);
+        var t, pa = 0;
+        if (wx < 256) {
+          var tx = wx >> 3;
+          t = nt[ty * 32 + tx];
+          var a = attr[(ty >> 2) * 8 + (tx >> 2)];
+          pa = ((a >> (((ty & 2) << 1) | (tx & 2))) & 3) << 2;
+        } else t = blank;
+        var c = rom.tile(banks[t >> 6], t)[fy * 8 + (wx & 7)];
+        if (c) { fb[row + xx] = colors[pa | c]; op[row + xx] = 1; }
+      }
+    }
+  },
+  // $3F10/$14/$18/$1C son espejos de $3F00/$04/$08/$0C: al subir los 32 bytes de la
+  // paleta, los bytes 16/20/24/28 pisan a los 0/4/8/12.
+  mirrorPal: function () {
+    for (var i = 0; i < 16; i += 4) this.pal[i] = this.pal[16 + i];
+  },
+  clear: function () {
+    this.fb.fill(this.rgba(this.pal[0])); this.bgop.fill(0);
+  },
   // Sprites desde SM.Spr (orden de prioridad NES: la entrada 0 queda encima).
   // ox = desplazamiento de la pantalla lógica dentro de la vista.
   // sprBanks = bancos de 1 KB para los tiles $00-$3F,$40-$7F,$80-$BF,$C0-$FF.
@@ -94,6 +130,21 @@ SM.Render = {
     var rom = SM.rom, W = this.W, H = this.H, fb = this.fb, op = this.bgop, S = SM.Spr;
     var colors = [];
     for (var i = 0; i < 16; i++) colors.push(this.rgba(this.pal[16 + i]));
+    // Límite del NES: sólo los 8 primeros sprites (en orden de la OAM) de cada línea se
+    // ven. En la vista panorámica no se aplica (hay más espacio horizontal).
+    var lim = !(SM.Game && SM.Game.wide), cnt = this.lineCnt, drop = this.lineDrop;
+    if (lim) {
+      cnt.fill(0); drop.fill(0);
+      for (var j = 0; j < 64; j++) {
+        if (!S.on[j]) continue;
+        var y0 = S.y[j] + 1;
+        if (S.y[j] >= 0xEF || y0 >= H) continue;
+        for (var l = Math.max(0, y0); l < y0 + 8 && l < H; l++) {
+          if (cnt[l] < 8) cnt[l]++;
+          else drop[j * 256 + l] = 1;
+        }
+      }
+    }
     for (var k = 63; k >= 0; k--) {
       if (!S.on[k]) continue;
       var x = S.x[k] + ox, y = S.y[k] + 1, t = S.t[k], a = S.a[k];
@@ -103,6 +154,7 @@ SM.Render = {
       for (var py = 0; py < 8; py++) {
         var yy = y + py;
         if (yy < 0 || yy >= H) continue;
+        if (lim && drop[k * 256 + yy]) continue;
         var srow = (vf ? 7 - py : py) * 8, row = yy * W;
         for (var pxx = 0; pxx < 8; pxx++) {
           var xx = x + pxx;
