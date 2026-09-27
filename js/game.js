@@ -292,8 +292,15 @@ var SM = window.SM || (window.SM = {});
       case 1: SM.Title.continueScreen(); break;
       case 2: ram[R.MUSIC] = 0; G.startAct(); break;
       case 3: SM.Title.start(); break;
-      case 4: SM.Results.start(function () { G.startAct(); }); break;
-      case 5: SM.Results.zoneClear(); break;
+      case 4:
+        SM.Results.start(function () {
+          // el port incluye sólo el Mundo 1 (Green Hill y su etapa especial): al pasar a
+          // la zona siguiente se muestra el final
+          if (ram[R.ZONE] !== 0 && ram[R.ZONE] !== 7) SM.TheEnd.start();
+          else G.startAct();
+        });
+        break;
+      case 5: SM.TheEnd.start(); break;
     }
   }
 

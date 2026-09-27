@@ -10,6 +10,8 @@ SM.Render = {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.pal = new Uint8Array(32);      // equivalente a la RAM de paleta de la PPU
+    this.lineCnt = new Uint8Array(240);
+    this.lineDrop = new Uint8Array(64 * 256);
     this.resize(256);
   },
   resize: function (w) {
@@ -128,6 +130,21 @@ SM.Render = {
     var rom = SM.rom, W = this.W, H = this.H, fb = this.fb, op = this.bgop, S = SM.Spr;
     var colors = [];
     for (var i = 0; i < 16; i++) colors.push(this.rgba(this.pal[16 + i]));
+    // Límite del NES: sólo los 8 primeros sprites (en orden de la OAM) de cada línea se
+    // ven. En la vista panorámica no se aplica (hay más espacio horizontal).
+    var lim = !(SM.Game && SM.Game.wide), cnt = this.lineCnt, drop = this.lineDrop;
+    if (lim) {
+      cnt.fill(0); drop.fill(0);
+      for (var j = 0; j < 64; j++) {
+        if (!S.on[j]) continue;
+        var y0 = S.y[j] + 1;
+        if (S.y[j] >= 0xEF || y0 >= H) continue;
+        for (var l = Math.max(0, y0); l < y0 + 8 && l < H; l++) {
+          if (cnt[l] < 8) cnt[l]++;
+          else drop[j * 256 + l] = 1;
+        }
+      }
+    }
     for (var k = 63; k >= 0; k--) {
       if (!S.on[k]) continue;
       var x = S.x[k] + ox, y = S.y[k] + 1, t = S.t[k], a = S.a[k];
@@ -137,6 +154,7 @@ SM.Render = {
       for (var py = 0; py < 8; py++) {
         var yy = y + py;
         if (yy < 0 || yy >= H) continue;
+        if (lim && drop[k * 256 + yy]) continue;
         var srow = (vf ? 7 - py : py) * 8, row = yy * W;
         for (var pxx = 0; pxx < 8; pxx++) {
           var xx = x + pxx;
