@@ -172,6 +172,38 @@ var SM = window.SM || (window.SM = {});
     }
   }
 
-  // Pantalla de continuación ($CFD4): pendiente; por ahora vuelve al título.
-  TI.continueScreen = function () { TI.start(); };
+  // ---------- pantalla de continuación ($CFD4) ----------
+  var cnt = new Uint8Array(1024);
+  TI.continueScreen = function () {
+    ram[R.IRQMODE] = 2; ram[R.MUSIC] = 0;
+    ram[0x02] = 0; ram[0x03] = 0; ram[0x34D] = 0;
+    cnt.fill(0xFF);
+    for (var k = 0; k < 5; k++) {                         // $D080: cinco textos
+      var p = w30(0xD0B3 + k * 2), addr = (t30(p) << 8) | t30(p + 1);
+      for (var j = p + 2; t30(j) !== 0xFF; j++, addr++) cnt[(addr - 0x2000) & 0x3FF] = t30(j);
+    }
+    // paleta 9 de la tabla $D5CC, completa
+    ram[R.ZONE_P] = 9; ram[0x332] = 0; ram[0x333] = 4; SM.Game.palStep();
+    ram[0x606] = 1;
+    ram[R.CHR0] = 0x70; ram[R.CHR1] = 0x72;
+    ram[R.CHR2] = 0x70; ram[R.CHR3] = 0x71; ram[R.CHR4] = 0x72; ram[R.CHR5] = 0x73;
+    SM.Game.scene = contStep;
+  };
+  function contStep() {
+    SM.Game.nmi();
+    var j = ram[R.JOYP];
+    if (j & 0x08) ram[0x606] = 1;
+    else if (j & 0x04) ram[0x606] = 0;
+    var Rn = SM.Render, ox = (Rn.W - 256) >> 1;
+    SM.Spr.clear();
+    SM.Spr.push(0x70, ram[0x606] ? 0xA0 : 0xA8, 0x68, 0);
+    Rn.clear();
+    Rn.drawNTRows(cnt, cnt.subarray(960), [0x70, 0x71, 0x72, 0x73], 0, 0, 240, ox, 0xFF);
+    Rn.drawSprites([0x70, 0x71, 0x72, 0x73], ox);
+    if (!(j & 0xC0)) return;
+    if (!ram[0x606]) return TI.start();                   // NO: reinicio
+    ram[0xB3]--; ram[R.ACT] = 0; ram[R.LIVES] = 3;        // SÍ: acto 1 de la zona
+    ram[R.MUSIC] = 0; ram[R.IRQMODE] = 2;
+    SM.Game.startAct();
+  }
 })();
