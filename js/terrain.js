@@ -55,7 +55,7 @@ var SM = window.SM || (window.SM = {});
   // Al empezar un acto se encolan todos los bloques del mapa; se calculan de a poco
   // (T.idle, unos ms por cuadro) para que no haya tirones al llegar a zonas nuevas.
   T.reset = function () {
-    cache = {}; queue = [];
+    cache = {}; queue = []; loopChunk = {}; edgeCache = {}; decoCache = {};
     var L = SM.Level, seen = {};
     if (!L.layout) return;
     for (var i = 0; i < 256; i++) {
@@ -176,20 +176,54 @@ var SM = window.SM || (window.SM = {});
   }
 
   // Bloque del metatile m en un chunk (el manejador depende del número de chunk) y capa
+  // ¿El chunk contiene un loop? Los tipos "curvos" de Somari ($50-$77) también se usan en
+  // arcos y adornos; sólo los loops tienen tramos que cambian según la capa.
+  var loopChunk = {};
+  function isLoopChunk(cid) {
+    if (loopChunk[cid] !== undefined) return loopChunk[cid];
+    var L = SM.Level, cb = (cid & 0x20) ? L.chunkB : L.chunkA, res = false, done = {};
+    for (var k = 0; k < 240 && !res; k++) {
+      var m = cb[(cid & 0x1F) * 256 + k], t = L.mtCol[m];
+      if (done[m] || !LOOP[handlerOf(t)]) continue;
+      done[m] = 1;
+      var a = buildMask(t, cid, 0), b = buildMask(t, cid, 1);
+      for (var i = 0; i < 256; i++) if (a[i] !== b[i]) { res = true; break; }
+    }
+    loopChunk[cid] = res;
+    return res;
+  }
   T.block = function (m, chunk, layer) {
-    var t = SM.Level.mtCol[m], key = m + ':' + (chunk >= 0x3D ? 1 : 0) + ':' + (layer ? 1 : 0);
+    var t = SM.Level.mtCol[m], h = handlerOf(t), curved = !!LOOP[h] || (t >= 0x50 && t < 0x78);
+    var inLoop = curved && isLoopChunk(chunk);
+    var key = m + ':' + (chunk >= 0x3D ? 1 : 0) + ':' + (layer ? 1 : 0) + ':' + (inLoop ? 1 : 0);
     var b = cache[key];
     if (b !== undefined) return b;
-    var h = handlerOf(t), fx = FX[h];
+    var fx = FX[h];
     if (fx && fx !== 'spikes' && fx !== 'spring' && fx !== 'springSide') b = null;
     else {
-      var mask = closeHoles(buildMask(t, chunk, layer));
-      if (LOOP[h]) {
+      var mask = closeHoles(buildMask(t, chunk, layer)), i;
+      if (inLoop && LOOP[h]) {
         var any = false;
-        for (var i = 0; i < 256; i++) if (mask[i]) { any = true; break; }
+        for (i = 0; i < 256; i++) if (mask[i]) { any = true; break; }
         if (any) mask = gfxMask(m);
+      } else if (curved && !inLoop) {
+        // arcos y adornos: sólo el piso que se puede pisar (sin techos ni paredes), y sólo
+        // donde arriba de la superficie no hay dibujo (en un arco lo que queda arriba es la
+        // piedra del propio arco)
+        var g = gfxMask(m);
+        for (i = 0; i < 256; i++) mask[i] &= 1;
+        for (var c = 0; c < 16; c++) {
+          var y0 = 0;
+          while (y0 < 16 && !mask[y0 * 16 + c]) y0++;
+          if (y0 === 0 || y0 === 16) continue;
+          // arco: todo lo dibujado encima de la superficie (hasta 4 px) es piedra
+          var solidAbove = true;
+          for (var k = 1; k <= 4 && y0 - k >= 0; k++) if (!g[(y0 - k) * 16 + c]) { solidAbove = false; break; }
+          if (solidAbove && y0 >= 4) for (var y = 0; y < 16; y++) mask[y * 16 + c] = 0;
+        }
       }
       b = makeBlock(mask);
+      if (b && curved && !inLoop) b.deco = m;
     }
     if (b && fx) b.fx = fx;
     cache[key] = b;
@@ -208,9 +242,59 @@ var SM = window.SM || (window.SM = {});
     var cb = (cid & 0x20) ? L.chunkB : L.chunkA;
     return { m: cb[(cid & 0x1F) * 256 + ((yl & 0xF0) | (xl >> 4))], chunk: cid, ringBase: L.ringIdx[yi] };
   };
+  function rawBlock(tx, ty, layer) {
+    var c = T.cell(tx * 16, ty * 16);
+    return c ? T.block(c.m, c.chunk, layer) : null;
+  }
+  // Bordes redondeados de las plataformas: el pasto que se curva en el extremo es un
+  // adorno; si del lado que baja no sigue ningún piso, el bloque se toma como plano.
+  var edgeCache = {};
+  function edgeFix(b, tx, ty, layer) {
+    var hm = b.hmT, max = 0, c;
+    for (c = 0; c < 16; c++) if (hm[c] > max) max = hm[c];
+    if (max <= 0 || max === 16 && hm[0] === 16 && hm[15] === 16) return b;
+    var l = hm[0] > 0 ? hm[0] : 0, r = hm[15] > 0 ? hm[15] : 0;
+    if (Math.abs(l - r) < 3) return b;
+    var dir = l < r ? -1 : 1;                       // lado que baja
+    var n = rawBlock(tx + dir, ty, layer), nc = dir < 0 ? 15 : 0;
+    if (n && n.hmT[nc] > 0) return b;               // el piso sigue al costado
+    var nb = rawBlock(tx + dir, ty + 1, layer);
+    if (nb && nb.hmT[nc] >= 12) return b;           // una pendiente que baja a la fila siguiente
+    var key = b.hmT.join(',') + ':' + max;
+    var f = edgeCache[key];
+    if (!f) {
+      f = Object.assign({}, b);
+      f.hmT = new Int8Array(16).fill(max);
+      f.angle = 0;
+      edgeCache[key] = f;
+    }
+    return f;
+  }
+  // Tramo curvo decorativo cuya parte sólida empieza en el borde superior: sólo es piso
+  // en las columnas donde el tile de arriba es cielo (si no, es parte de un arco).
+  var decoCache = {};
+  function decoFix(b, px, py) {
+    var up = T.cell(px, py - 16);
+    if (!up) return b;
+    var key = b.deco + ':' + up.m + ':' + b.hmT.join(',');
+    var f = decoCache[key];
+    if (f !== undefined) return f;
+    var g = gfxMask(up.m), mask = new Uint8Array(b.mask), changed = false;
+    for (var c = 0; c < 16; c++) {
+      if (!mask[c] || !g[15 * 16 + c] || !g[14 * 16 + c] || !g[13 * 16 + c] || !g[12 * 16 + c]) continue;
+      for (var y = 0; y < 16; y++) mask[y * 16 + c] = 0;
+      changed = true;
+    }
+    f = changed ? makeBlock(mask) : b;
+    decoCache[key] = f;
+    return f;
+  }
   T.blockAt = function (px, py, layer) {
     var c = T.cell(px, py);
     if (!c) return null;
-    return T.block(c.m, c.chunk, layer);
+    var b = T.block(c.m, c.chunk, layer);
+    if (b && b.deco !== undefined) { b = decoFix(b, px, py); if (!b) return null; }
+    if (b && !b.lrb && b.angle && b.angle !== 0xFF) b = edgeFix(b, px >> 4, Math.floor(py / 16), layer);
+    return b;
   };
 })();
