@@ -51,16 +51,38 @@ var SM = window.SM || (window.SM = {});
     return m;
   }
 
-  var cache = {};
-  T.reset = function () { cache = {}; };
+  var cache = {}, queue = [];
+  // Al empezar un acto se encolan todos los bloques del mapa; se calculan de a poco
+  // (T.idle, unos ms por cuadro) para que no haya tirones al llegar a zonas nuevas.
+  T.reset = function () {
+    cache = {}; queue = [];
+    var L = SM.Level, seen = {};
+    if (!L.layout) return;
+    for (var i = 0; i < 256; i++) {
+      var cid = L.layout[i], cb = (cid & 0x20) ? L.chunkB : L.chunkA;
+      for (var k = 0; k < 240; k++) {
+        var m = cb[(cid & 0x1F) * 256 + k], key = m + ':' + (cid >= 0x3D ? 1 : 0);
+        if (seen[key]) continue;
+        seen[key] = 1; queue.push([m, cid]);
+      }
+    }
+  };
+  T.idle = function (ms) {
+    var t0 = Date.now();
+    while (queue.length && Date.now() - t0 < ms) {
+      var q = queue.pop();
+      T.block(q[0], q[1], 0); T.block(q[0], q[1], 1);
+    }
+  };
 
   // Sonda: pone el sensor en el píxel (x, y) del tile, con un contexto de movimiento, y
   // ejecuta el manejador original. Devuelve la reacción:
   //   0 = no hace nada; 'u' = empuja hacia arriba (suelo); 'd' = hacia abajo (techo);
   //   'l' = hacia la izquierda (pared a la derecha); 'r' = hacia la derecha.
   var BASE_X = 0x1000, BASE_Y = 0x10 * 240 + 0x80;   // tile de prueba (lejos del jugador)
+  var zp = new Uint8Array(0x100), page3 = new Uint8Array(0x100);
   function probe(t, chunk, layer, x, y, ctx) {
-    var save = ram.slice(0);
+    zp.set(ram.subarray(0, 0x100)); page3.set(ram.subarray(0x300, 0x400));
     ram[R.SX_HI] = BASE_X >> 8; ram[R.SX_LO] = (BASE_X & 0xFF) | x;
     ram[R.SY_HI] = 0x10; ram[R.SY_LO] = 0x80 | y;
     // "jugador" en otro tile para que los empujes hacia su lado se activen
@@ -71,6 +93,7 @@ var SM = window.SM || (window.SM = {});
     else if (ctx === 2) { ram[R.PFLAGS] = 0; ram[R.VSPD] = 0; ram[R.PX_LO] = (BASE_X & 0xFF) - 0x10; ram[R.PX_HI] = (BASE_X - 0x10) >> 8; } // hacia la derecha
     else { ram[R.PFLAGS] = 0x41; ram[R.VSPD] = 0; ram[R.PX_LO] = (BASE_X & 0xFF) + 0x10; }  // hacia la izquierda
     ram[R.GSPD] = 0x20; ram[R.HIT] = 1; ram[R.AGAIN] = 0;
+    ram[R.HURT] = 1;                    // los pinchos no lastiman durante el sondeo
     ram[R.COL_TYPE] = t; ram[R.COL_CHUNK] = chunk; ram[R.COL_8B] = layer;
     ram[R.COL_ROW] = (t & 0x80) ? SM.rom.b(0x17, 0x8B79 + (t & 15)) : SM.rom.b(0x16, 0x92BF + (t & 15));
     ram[R.T25] = 0;
@@ -80,12 +103,13 @@ var SM = window.SM || (window.SM = {});
     if (dy < 0) r = 'u'; else if (dy > 0) r = 'd';
     else if (dx < 0) r = 'l'; else if (dx > 0) r = 'r';
     else if (ram[R.AGAIN] && ram[R.AGAIN] !== 0xF0) r = 'u';
-    ram.set(save, 0);
+    ram.set(zp, 0); ram.set(page3, 0x300);
     return r;
   }
 
   // Máscara 16x16 de un metatile (2 bits por píxel: 1 = sólido desde arriba, 2 = sólido total)
   function buildMask(t, chunk, layer) {
+    var save = ram.slice(0);            // (por las dudas, se restaura toda la RAM al final)
     var top = new Uint8Array(256), all = new Uint8Array(256);
     for (var ctx = 0; ctx < 4; ctx++) {
       for (var y = 0; y < 16; y++) for (var x = 0; x < 16; x++) {
@@ -103,6 +127,7 @@ var SM = window.SM || (window.SM = {});
         }
       }
     }
+    ram.set(save, 0);
     var m = new Uint8Array(256);
     for (var j = 0; j < 256; j++) m[j] = all[j] ? 3 : (top[j] ? 1 : 0);
     return m;

@@ -823,6 +823,7 @@ var SM = window.SM || (window.SM = {});
   }
   S3.update = function () {
     held = ram[R.JOY]; pressed = ram[R.JOYP];
+    SM.Terrain.idle(3);
     if (S3.somari || somariPhase()) {
       SM.Player.update();
       S3.stale = true;
