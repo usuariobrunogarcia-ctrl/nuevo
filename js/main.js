@@ -34,7 +34,7 @@ var SM = window.SM || (window.SM = {});
   var settings = { wide: false, smooth: false, s3: false };
   try {
     var s = JSON.parse(localStorage.getItem('somari-settings') || '{}');
-    if (s) { settings.wide = !!s.wide; settings.s3 = !!s.s3; }
+    if (s) { settings.wide = !!s.wide; settings.s3 = !!s.s3; settings.buzzFix = !!s.buzzFix; settings.fewerEnemies = !!s.fewerEnemies; }
   } catch (e) {}
   SM.settings = settings;
   function save() { try { localStorage.setItem('somari-settings', JSON.stringify(settings)); } catch (e) {} }
@@ -68,6 +68,7 @@ var SM = window.SM || (window.SM = {});
     save(); physicsLabel();
   };
   SM.togglePhysics = function () { SM.setPhysics(!settings.s3); };
+  SM.toggleSetting = function (k) { settings[k] = !settings[k]; save(); };
 
   // ---- bucle de 60 Hz con paso fijo ----
   var acc = 0, last = 0, STEP = 1000 / 60.0988;

@@ -178,7 +178,7 @@ var SM = window.SM || (window.SM = {});
   function inRange(x) { return relPos(x); }   // $9F94 (Z=0 -> en rango)
 
   var U = {};
-  // ---- $8000: tipo 01 (cangrejo caminando) ----
+  // ---- $8000: tipo 01 (avispa / Buzz Bomber patrullando) ----
   U[0x01] = function (x) {
     addX(x, (ram[P + x] & 0x80) ? 2 : -2);
     if ((ram[XL + x] & 0x0F) === 0) {
@@ -189,13 +189,25 @@ var SM = window.SM || (window.SM = {});
     if (!relPos(x)) return despawn(x);
     var y = ram[P + x];
     if (!(y & 1)) {
-      var a = (ram[SXL + x] ^ ram[SYL + x]) & 0xF0;
-      if (a === 0 || a === 0xF0) { ram[TYPE + x] = 2; ram[P + x] = y | 1; }
+      var fire;
+      if (SM.settings && SM.settings.buzzFix) {
+        // opción "fixed": dispara al tener al jugador adelante y abajo, a media distancia,
+        // sin esperar a que quede justo en la diagonal de la bala
+        var sx = ram[SXL + x] | (ram[SXH + x] << 8); if (sx >= 0x8000) sx -= 0x10000;
+        var ahead = (y & 0x80) ? sx < 0 : sx > 0, adx = Math.abs(sx);
+        fire = ahead && (ram[SYH + x] & 0x80) && adx >= 0x20 && adx < 0x60;
+      } else {
+        // original: sólo cuando |dx| y |dy| coinciden (el jugador está en la diagonal de
+        // 45° por la que viaja la bala), por eso casi nunca falla
+        var a = (ram[SXL + x] ^ ram[SYL + x]) & 0xF0;
+        fire = a === 0 || a === 0xF0;
+      }
+      if (fire) { ram[TYPE + x] = 2; ram[P + x] = y | 1; }
     }
     ram[W9F] = 0x20; ram[WA0] = 0x18; ram[K9E] = 0;
     touch(x);
   };
-  // ---- $80DE: tipo 02 (cangrejo disparando) ----
+  // ---- $80DE: tipo 02 (avispa disparando) ----
   U[0x02] = function (x) {
     if ((ram[R.FRAME] & 0x1F) === 0) {
       var t = (ram[P + x] + 2) & 0xFF;
@@ -234,7 +246,7 @@ var SM = window.SM || (window.SM = {});
     }
     relTouch(x, 0x20, 0x18, 0);
   };
-  // ---- $8256: tipo 1A (bala del cangrejo) ----
+  // ---- $8256: tipo 1A (bala de la avispa) ----
   U[0x1A] = function (x) {
     var p = ram[P + x];
     if (!(p & 0x80)) {
@@ -247,7 +259,7 @@ var SM = window.SM || (window.SM = {});
     addYraw(x, 2);
     relTouchTmp(x, 8, 8, 2);
   };
-  // ---- $82BA: tipo 04 (motobug) ----
+  // ---- $82BA: tipo 04 (cangrejo caminando) ----
   U[0x04] = function (x) {
     var tick = true;
     if (ram[R.FRAME] & 2) {
@@ -270,7 +282,7 @@ var SM = window.SM || (window.SM = {});
     ram[W9F] = 0x20; ram[WA0] = 0x18; ram[K9E] = 0;
     touch(x);
   };
-  // ---- $839E: tipo 05 (disparando dos balas) ----
+  // ---- $839E: tipo 05 (cangrejo disparando dos balas) ----
   U[0x05] = function (x) {
     if ((ram[R.FRAME] & 0x1F) === 0) {
       var t = (ram[P + x] + 2) & 6;
@@ -629,6 +641,23 @@ var SM = window.SM || (window.SM = {});
   Obj.U = U;
 
   // ---- $A029: aparición de objetos de los 8 chunks vecinos ----
+  // Opción "cantidad de enemigos: fixed": se quitan 2 de cada 5 enemigos del acto (40%),
+  // siempre los mismos (según su orden en la tabla de objetos del acto).
+  var ENEMY = { 0x01: 1, 0x03: 1, 0x04: 1, 0x06: 1, 0x07: 1, 0x08: 1 };
+  var cutKey = -1, cut = null;
+  function removed(base, X) {
+    var key = ram[R.ZBANK] * 0x10000 + base;
+    if (key !== cutKey) {
+      cutKey = key; cut = {};
+      for (var i = 0, n = 0; i < 256; i++) {
+        var t = tZ(base + i);
+        if (!ENEMY[t]) continue;
+        if (n % 5 === 1 || n % 5 === 3) cut[i] = 1;
+        n++;
+      }
+    }
+    return !!cut[X];
+  }
   Obj.spawn = function () {
     var zone = ram[R.ZONE], act = ram[R.ACT];
     if (zone >= 5) return;
@@ -656,6 +685,7 @@ var SM = window.SM || (window.SM = {});
         var byte = SM.rom.b(0x15, 0xB273 + X), bit = SM.rom.b(0x15, 0xB2F3 + X);
         if (ram[R.OBJ_SPAWNED + byte] & bit) continue;
         ram[R.OBJ_SPAWNED + byte] |= bit;
+        if (SM.settings && SM.settings.fewerEnemies && removed(base, X)) continue;
         var s = ram[R.OBJ_N];
         ram[XH + s] = tZ(base + 0x80 + X); ram[XL + s] = tZ(base + 0x40 + X);
         ram[TYPE + s] = t;
