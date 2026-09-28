@@ -34,7 +34,7 @@ var SM = window.SM || (window.SM = {});
   var settings = { wide: false, smooth: false, s3: false };
   try {
     var s = JSON.parse(localStorage.getItem('somari-settings') || '{}');
-    if (s) { settings.wide = !!s.wide; settings.s3 = !!s.s3; settings.buzzFix = !!s.buzzFix; settings.fewerEnemies = !!s.fewerEnemies; }
+    if (s) { settings.wide = !!s.wide; settings.s3 = !!s.s3; settings.buzzFix = !!s.buzzFix; settings.fewerEnemies = !!s.fewerEnemies; settings.tails = !!s.tails; }
   } catch (e) {}
   SM.settings = settings;
   function save() { try { localStorage.setItem('somari-settings', JSON.stringify(settings)); } catch (e) {} }

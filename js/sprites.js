@@ -8,7 +8,9 @@ SM.Spr = {
   x: new Int16Array(64), y: new Int16Array(64), t: new Uint8Array(64), a: new Uint8Array(64),
   on: new Uint8Array(64),
   // $C7D0: ocultar todo
-  clear: function () { this.on.fill(0); SM.ram[0x3C] = 0; },
+  clear: function () { this.on.fill(0); SM.ram[0x3C] = 0; this.img = null; },
+  // Imagen suelta (Tails) que se dibuja con la prioridad de la entrada img.i
+  img: null,
   // escribe en la entrada del cursor y avanza (STA $0200,X ... ; X += 4)
   push: function (x, y, t, a) {
     var i = SM.ram[0x3C] >> 2;

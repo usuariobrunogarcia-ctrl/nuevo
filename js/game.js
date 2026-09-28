@@ -171,6 +171,8 @@ var SM = window.SM || (window.SM = {});
       G.computeView();
       SM.Spr.clear();
       SM.Player.drawInitial();
+      SM.Tails.reset();
+      SM.Tails.replace(0, ram[0x3C] >> 2);
       SM.S3.reset();
       G.scene = fadeIn;
     }
@@ -212,6 +214,7 @@ var SM = window.SM || (window.SM = {});
       var sp0 = ram[0x3C] >> 2;
       SM.Player.animate();
       SM.S3.fixSprite(sp0, ram[0x3C] >> 2);
+      SM.Tails.replace(sp0, ram[0x3C] >> 2);
       SM.ObjDraw.drawAll();
       if (ram[0xB6]) SM.Ending.drawCapsule();
       if (ram[0xB8] >= 4) SM.Boss.draw();

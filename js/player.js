@@ -29,6 +29,7 @@ var SM = window.SM || (window.SM = {});
 
   // ---- $A190: lógica por cuadro (antes de mover la cámara) ----
   P.update = function () {
+    if (SM.Tails && SM.Tails.update()) return;   // Tails volando (no es del original)
     if (!(ram[R.STATE] & 0x80)) {
       stateLogic();
       if (ram[0xAF]) {                           // se acabó el tiempo
@@ -261,6 +262,28 @@ var SM = window.SM || (window.SM = {});
       ram[R.NY_LO] = lo2; ram[R.NY_HI] = hi2;
     }
     if (ram[R.STATE] !== 9) SM.Collision.player();
+    clampStep();
+  };
+
+  // Como P.move, pero con el desplazamiento vertical dado en píxeles (negativo = arriba).
+  // Lo usa el vuelo de Tails, que no sigue la tabla de velocidades de $AC62.
+  P.moveBy = function (dy) {
+    var y = ram[R.GSPD] >> 4, d = ram[R.GSPD] ? t1D((ram[R.WATER] ? 0xAC42 : 0xAC52) + y) : 0;
+    var x16 = (ram[R.PX_HI] << 8) | ram[R.PX_LO];
+    if (d) x16 = (ram[R.PFLAGS] & 1) ? x16 - d : x16 + d;
+    ram[R.NX_HI] = (x16 >> 8) & 0xFF; ram[R.NX_LO] = x16 & 0xFF;
+    var lo = ram[R.PY_LO], hi = ram[R.PY_HI];
+    if (dy < 0) {
+      lo += dy;
+      if (lo < 0) { lo += 256; hi = (hi - 1) & 0xFF; }
+      if (lo >= 0xF0) lo -= 0x10;
+    } else if (dy > 0) {
+      lo += dy;
+      if (lo > 0xFF) { lo -= 256; hi = (hi + 1) & 0xFF; }
+      if (lo >= 0xF0) { lo = (lo + 0x10) & 0xFF; hi = (hi + 1) & 0xFF; }
+    }
+    ram[R.NY_LO] = lo; ram[R.NY_HI] = hi;
+    SM.Collision.player();
     clampStep();
   };
 
