@@ -160,6 +160,7 @@ var SM = window.SM || (window.SM = {});
     ram[0xEB] = 0;
     SM.ZoneCard.start(function () {
       SM.Level.init(SM.rom, ram[R.ZONE], ram[R.ACT]);
+      SM.Terrain.reset();
       // $C3FA: estado inicial del sprite del jugador
       ram[R.PSCR_X] = 0x80; ram[R.PSCR_Y] = 0x80;
       SM.Player.loadFrame();
@@ -172,6 +173,7 @@ var SM = window.SM || (window.SM = {});
       G.computeView();
       SM.Spr.clear();
       SM.Player.drawInitial();
+      SM.S3.reset();
       G.scene = fadeIn;
     });
   };
@@ -203,12 +205,14 @@ var SM = window.SM || (window.SM = {});
     if (ram[R.JOYP] & 0x10) ram[0xEB] ^= 1;
     if (!ram[0xEB]) {
       if (ram[R.SEC_CNT] === 0) perSecond();
-      SM.Player.update();
+      if (SM.S3.enabled) SM.S3.update(); else SM.Player.update();
       SM.Objects.update();
       if (ram[0xB8]) SM.Boss.update();
       SM.Camera.update();
       G.computeView();
+      var sp0 = ram[0x3C] >> 2;
       SM.Player.animate();
+      SM.S3.fixSprite(sp0, ram[0x3C] >> 2);
       SM.ObjDraw.drawAll();
       if (ram[0xB6]) SM.Ending.drawCapsule();
       if (ram[0xB8] >= 4) SM.Boss.draw();
