@@ -201,6 +201,8 @@ var SM = window.SM || (window.SM = {});
       return [
         { label: 'VISTA', value: s.wide ? 'PANORÁMICA' : 'ORIGINAL', toggle: function () { SM.toggleWide(); } },
         { label: 'FÍSICA', value: s.s3 ? 'SONIC 3' : 'ORIGINAL', toggle: function () { SM.togglePhysics(); } },
+        { label: 'PUNTERÍA BUZZ BOMBER', value: s.buzzFix ? 'FIXED' : 'ORIGINAL', toggle: function () { SM.toggleSetting('buzzFix'); } },
+        { label: 'CANTIDAD DE ENEMIGOS', value: s.fewerEnemies ? 'FIXED' : 'ORIGINAL', toggle: function () { SM.toggleSetting('fewerEnemies'); } },
         { label: 'VOLVER', back: true }
       ];
     },
@@ -245,6 +247,11 @@ var SM = window.SM || (window.SM = {});
     }
     // panel
     var rowH = 16, bw = 196, bh = 26 + items.length * rowH + 8;
+    for (var n = 0; n < items.length; n++) {
+      var need = 22 + textW(items[n].label, 1) + (items[n].value ? 14 + textW('< ' + items[n].value + ' >', 1) : 0) + 10;
+      if (need > bw) bw = need;
+    }
+    bw = Math.min(bw, W - 8);
     var bx = Math.round(cx - bw / 2), by = paused ? Math.round((H - bh) / 2) : 86;
     o += box(bx, by, bw, bh, '#0c1440', '#ffffff');
     o += rect(bx + 3, by + 3, bw - 6, 1, '#3050b0');
