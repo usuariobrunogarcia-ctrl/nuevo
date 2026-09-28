@@ -106,6 +106,11 @@ var SM = window.SM || (window.SM = {});
   }
 
 
+  // columnas [arriba, abajo]: T A I L S _ _ H A S
+  var TAILS_HAS = [[0x30, 0x31], [0x32, 0x33], [0x24, 0x25], [0x26, 0x27], [0x14, 0x15],
+    [0x14, 0x16], [0xFF, 0x17], [0x28, 0x29], [0x2A, 0x2B], [0xFF, 0xFF], [0xFF, 0xFF],
+    [0x10, 0x11], [0x12, 0x13], [0x24, 0x25], [0x26, 0x27], [0x28, 0x29], [0x2A, 0x2B]];
+
   RS.start = function (cb) {
     // el original guarda la centena de anillos (100 o más); aquí basta con 50 o más
     ram[0xE9] = (ram[0x336] || ram[0x337] >= 5) ? 1 : 0;
@@ -115,6 +120,12 @@ var SM = window.SM || (window.SM = {});
     var i, p = W(0x893C + T(0x933B + ram[0xB4]));
     for (i = 0; i < 22; i++) nt[0xC4 + i] = T(p + i);
     for (i = 0; i < 22; i++) nt[0xE4 + i] = T(p + 22 + i);
+    // con Tails: "TAILS HAS" con la misma fuente de 2x2 tiles (la T de "LABYRINTH" y la L
+    // de "GREEN HILL"); tras la etapa especial el texto no nombra al personaje
+    if (SM.Tails.active() && !ram[0xB4]) {
+      for (i = 0; i < 22; i++) nt[0xC4 + i] = nt[0xE4 + i] = 0xFF;
+      TAILS_HAS.forEach(function (g, k) { nt[0xC4 + k] = g[0]; nt[0xE4 + k] = g[1]; });
+    }
     p = W(0x893C + T(0x933D + ram[0xB4]));
     for (i = 0; i < 22; i++) nt[0x124 + i] = T(p + i);
     for (i = 0; i < 22; i++) nt[0x144 + i] = T(p + 22 + i);
