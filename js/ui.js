@@ -309,7 +309,9 @@ var SM = window.SM || (window.SM = {});
     M.prevJoy = SM.Game.joy;
     SM.Render.pal.fill(0x0F); SM.Render.clear();
     SM.Game.freeMode = false;
-    SM.Game.scene = function () { step(); SM.Render.clear(); };
+    // música de la etapa especial (zona 7 en la tabla de músicas por zona, $83EF del banco $18)
+    SM.ram[SM.R.MUSIC] = SM.rom.b(0x18, 0x83EF + 7);
+    SM.Game.scene = function () { step(); SM.Render.clear(); if (SM.Sound) SM.Sound.update(); };
     M.active = true; M.dirty = true;
     SM.Fade.set(0);
     render();
