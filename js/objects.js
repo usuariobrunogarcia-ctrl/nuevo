@@ -660,6 +660,7 @@ var SM = window.SM || (window.SM = {});
   }
   Obj.spawn = function () {
     var zone = ram[R.ZONE], act = ram[R.ACT];
+    if (zone === 7) return spawnSpecialGoal();
     if (zone >= 5) return;
     var L = SM.Level, w = ram[R.ROWW];
     var y = (ram[R.ROWS + ram[R.PY_HI]] + ram[R.PX_HI]) & 0xFF;
@@ -697,6 +698,21 @@ var SM = window.SM || (window.SM = {});
       }
     }
   };
+  // La etapa especial (zona 7) no tiene tabla de objetos y no se podía terminar: se pone
+  // un cartel de meta (no es del original) al final del pasillo, a la misma altura sobre
+  // el suelo que en Green Hill. Usa el bit de aparición del objeto 0 ($0369 bit 0), que
+  // la zona 7 no ocupa: despawn lo limpia y el cartel vuelve a aparecer si se regresa.
+  function spawnSpecialGoal() {
+    var GX = 0x880, GYH = 2, GYL = 0x61;
+    if ((ram[R.OBJ_SPAWNED] & 1) || ram[R.PX_HI] < (GX >> 8) - 1 || ram[R.OBJ_N] >= 0x17) return;
+    ram[R.OBJ_SPAWNED] |= 1;
+    var s = ram[R.OBJ_N];
+    ram[XH + s] = GX >> 8; ram[XL + s] = GX & 0xFF;
+    ram[YH + s] = GYH; ram[YL + s] = GYL;
+    ram[TYPE + s] = 0x2E; ram[P + s] = 0; ram[SRC + s] = 0;
+    ram[R.OBJ_N] = s + 1;
+  }
+
   // Condición del original: el objeto está en la misma "pantalla" que la cámara
   Obj.onScreen = function (xh, xl, yh, yl) {
     var dx = ((xh << 8) | xl) - ((ram[R.CAM_XH] << 8) | ram[R.CAM_XL]);

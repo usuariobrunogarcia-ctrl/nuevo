@@ -107,7 +107,8 @@ var SM = window.SM || (window.SM = {});
 
 
   RS.start = function (cb) {
-    ram[0xE9] = ram[0x336];
+    // el original guarda la centena de anillos (100 o más); aquí basta con 50 o más
+    ram[0xE9] = (ram[0x336] || ram[0x337] >= 5) ? 1 : 0;
     nt.fill(0xFF);
     unpack(W(0x8B94), nt);
     // $9286: textos
@@ -140,7 +141,8 @@ var SM = window.SM || (window.SM = {});
     };
   };
 
-  // $9516: acto siguiente; con 100 anillos o más (y no en el acto 3) va a la etapa especial
+  // $9516: acto siguiente; con 50 anillos o más (100 en el original; no en el acto 3) va a
+  // la etapa especial
   function nextAct() {
     if (ram[0xB4]) {
       ram[0xB4] = 0; ram[0xE9] = 0;
