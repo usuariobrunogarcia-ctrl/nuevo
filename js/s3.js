@@ -819,7 +819,9 @@ var SM = window.SM || (window.SM = {});
   // ---------------- cuadro ----------------
   function somariPhase() {
     var st = ram[R.STATE];
-    return st === 9 || (st & 0x80) || ram[0xB6] >= 3 || ram[0xEA] || ram[0xAF];
+    // la etapa especial (zona 7) está hecha de rebotadores y lanzadores propios de Somari:
+    // ahí siempre se usa el motor original
+    return st === 9 || (st & 0x80) || ram[0xB6] >= 3 || ram[0xEA] || ram[0xAF] || ram[R.ZONE] === 7;
   }
   S3.update = function () {
     held = ram[R.JOY]; pressed = ram[R.JOYP];
