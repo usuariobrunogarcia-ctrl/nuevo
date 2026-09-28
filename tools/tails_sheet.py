@@ -21,7 +21,7 @@ for y in range(H):
                         seen.add((c, d)); st.append((c, d))
             if n > 100: boxes.append((y0, x0, x1 - x0 + 1, y1 - y0 + 1))
 boxes.sort()
-boxes = boxes[:59]                      # sin el ícono de vidas ni los anillos
+boxes = boxes[:60]                      # 59 cuadros + el ícono de vidas (sin los anillos)
 pal = []; frames = []
 for (y0, x0, w, h) in boxes:
     s = ''

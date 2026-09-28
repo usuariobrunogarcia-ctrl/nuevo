@@ -98,11 +98,13 @@ var SM = window.SM || (window.SM = {});
       P.push(0x38 + ox, 0x20, t1D(0xA000 + ram[R.TIME_S]), 1);
     }
     if (ram[0x3C] < 0xEB) {
+      var face = ram[0x3C] >> 2;
       P.push(0x18 + ox, 0xC0, 0x7A, 0);
       P.push(0x20 + ox, 0xC0, 0x7E, 0);
       P.push(0x18 + ox, 0xC8, 0x7B, 0);
       P.push(0x20 + ox, 0xC8, 0x7F, 0);
       P.push(0x28 + ox, 0xC8, t1D(0xA000 + ram[R.LIVES]), 1);
+      SM.Tails.lifeIcon(face, 0x18 + ox, 0xC0);
     }
   }
 

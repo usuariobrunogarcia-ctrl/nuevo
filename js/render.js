@@ -145,9 +145,9 @@ SM.Render = {
         }
       }
     }
-    var im = S.img;
+    var ims = S.imgs;
     for (var k = 63; k >= 0; k--) {
-      if (im && k === im.i) this.drawImage(im, ox);
+      for (var q = 0; q < ims.length; q++) if (ims[q].i === k) this.drawImage(ims[q], ox);
       if (!S.on[k]) continue;
       var x = S.x[k] + ox, y = S.y[k] + 1, t = S.t[k], a = S.a[k];
       if (x <= -8 || x >= W || y <= -8 || y >= H) continue;

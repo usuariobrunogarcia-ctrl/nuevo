@@ -148,6 +148,7 @@ var SM = window.SM || (window.SM = {});
     fall: [43, 44, 45, 46], rise: [47, 48, 49, 50], roll: [51, 52, 53, 54],
     dash: [56, 57, 58], spring: [21], turn: [51]
   };
+  var ICON = 59;                         // ícono de vidas (16x16)
   var BALL = { fall: 1, rise: 1, roll: 1, dash: 1, turn: 1 };
   var cur = null, idx = 0, tim = 0;
 
@@ -191,6 +192,14 @@ var SM = window.SM || (window.SM = {});
 
   function s16(hi, lo) { var v = (hi << 8) | lo; return v >= 0x8000 ? v - 0x10000 : v; }
 
+  // Ícono de vidas del marcador: reemplaza los 4 sprites [from, from + 4) de la cara de
+  // Somari (esquina superior izquierda en x, y).
+  T.lifeIcon = function (from, x, y) {
+    if (!T.active()) return;
+    for (var i = from; i < from + 4; i++) SM.Spr.on[i] = 0;
+    SM.Spr.imgs.push({ i: from, im: image(ICON, false, 0), x: x, y: y + 1 });
+  };
+
   // Reemplaza las entradas [from, to) del metasprite de Somari por el cuadro de Tails.
   T.replace = function (from, to) {
     if (!T.active() || to <= from) return;
@@ -224,6 +233,6 @@ var SM = window.SM || (window.SM = {});
     var q = pt(ax, ay, fi.w, fi.h, k, 0);
     if (BALL[cur] || t) { dx = (x0 + x1) / 2; dy = (y0 + y1) / 2 + 1; }
     else { dx = s16(ram[R.PSCR_XH], ram[R.PSCR_X]); dy = s16(ram[R.PSCR_YH], ram[R.PSCR_Y]) + 1; }
-    S.img = { i: from, im: img, x: Math.round(dx - q[0]), y: Math.round(dy - q[1]) };
+    S.imgs.push({ i: from, im: img, x: Math.round(dx - q[0]), y: Math.round(dy - q[1]) });
   };
 })();
