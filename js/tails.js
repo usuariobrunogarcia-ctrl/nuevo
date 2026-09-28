@@ -136,15 +136,19 @@ var SM = window.SM || (window.SM = {});
   }
 
   // Cuadros de la hoja (en el orden de js/tailsgfx.js)
+  // La fila "IDLE / LOOK UP" son 5 cuadros de espera (la cola se mueve) y el de mirar
+  // arriba; "DUCK / WAITING" es agacharse y la impaciencia: de frente, 7-8 cuatro veces
+  // (la marca "x4" de la hoja) y el saludo. Ordenar los recuadros por su borde superior
+  // deja el de agacharse (más bajo) en el índice 10, después de los de impaciencia.
   var A = {
-    idle: [0, 1, 2, 3, 4, 5], wait: [6, 7, 8, 7], duck: [10], up: [9],
+    idle: [0, 1, 2, 3, 4], wait: [6, 7, 8, 7, 8, 7, 8, 7, 8, 9], duck: [10], up: [5],
     walk: [11, 12, 13, 14, 15, 16, 17, 18], run: [19, 20],
     walk45: [22, 23, 24, 25, 26, 27, 28, 29], run45: [30, 31], skid: [32],
     push: [33, 34, 35, 36], fly: [37, 38], tired: [39, 40], hit: [41], dead: [42],
     fall: [43, 44, 45, 46], rise: [47, 48, 49, 50], roll: [51, 52, 53, 54],
-    dash: [56, 57, 58], spring: [21]
+    dash: [56, 57, 58], spring: [21], turn: [51]
   };
-  var BALL = { fall: 1, rise: 1, roll: 1, dash: 1 };
+  var BALL = { fall: 1, rise: 1, roll: 1, dash: 1, turn: 1 };
   var cur = null, idx = 0, tim = 0;
 
   function pick() {
@@ -173,6 +177,10 @@ var SM = window.SM || (window.SM = {});
   // $23 los espejan (horizontal: t -> -t; vertical: t -> 180 - t).
   function orient() {
     var L = ram[R.LOOP], fl = ram[0x23], t = 0, left = false;
+    // la bola de Somari (animación 8, salto) es simétrica y su máscara en $8000 no deja
+    // pasar el bit de orientación a $23: se toma de donde lo tomaría el juego
+    if (!(SM.rom.b(0x1C, 0x8000 + ram[R.ANIM]) & 0x40) && ram[R.STATE] !== 9)
+      fl |= (L ? ram[R.ANGLE] : ram[R.PFLAGS]) & 0x40;
     if (L === 0x19) t = 45;
     else if (L === 0x20) { t = 45; left = true; }
     else if (L === 0x14) t = 90;
@@ -195,6 +203,9 @@ var SM = window.SM || (window.SM = {});
     }
     if (x0 > x1) return;
     var p = pick();
+    // entre subir y caer se usa el primer cuadro de rodar para girar (nota de la hoja)
+    if (p[0] === 'fall' && cur === 'rise') p = ['turn', 4];
+    else if (p[0] === 'fall' && cur === 'turn' && tim > 1) p = ['turn', 4];
     if (p[0] !== cur) { cur = p[0]; idx = 0; tim = p[1]; }
     else if (--tim <= 0) { idx++; tim = p[1]; }
     var seq = A[cur], fr = seq[idx % seq.length];
@@ -206,7 +217,9 @@ var SM = window.SM || (window.SM = {});
     var img = image(fr, hf, k), ax, ay, dx, dy;
     if (BALL[cur]) { ax = fi.bx; ay = fi.by; }
     else if (t || rot45) { ax = (fi.x0 + fi.x1) / 2; ay = (fi.y0 + fi.y1) / 2; }
-    else { ax = fi.w / 2; ay = fi.y1; }
+    // los recuadros de 40 px de ancho (el paso más largo de caminar) tienen el cuerpo en
+    // los 32 px de la izquierda: centrar en w/2 lo movía 4 px en ese cuadro
+    else { ax = Math.min(fi.w, 32) / 2; ay = fi.y1; }
     if (hf) ax = fi.w - ax;
     var q = pt(ax, ay, fi.w, fi.h, k, 0);
     if (BALL[cur] || t) { dx = (x0 + x1) / 2; dy = (y0 + y1) / 2 + 1; }

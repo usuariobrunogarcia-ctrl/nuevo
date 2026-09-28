@@ -322,6 +322,7 @@ var SM = window.SM || (window.SM = {});
 
   // ---- $A1D0: animación y dibujo (después de la cámara) ----
   P.animate = function () {
+    P.bodyFrom = ram[0x3C] >> 2;
     var st = ram[R.STATE];
     if (st & 0x80) return;
     if (st !== 8 && st !== 0x20) ram[R.PFLAGS2] &= 0xFB;
@@ -355,6 +356,7 @@ var SM = window.SM || (window.SM = {});
     setupSprite();
     if (ram[R.SHIELD]) P.drawShield();
     if (ram[R.PFLAGS2] & 2) P.drawStars();
+    P.bodyFrom = ram[0x3C] >> 2;               // primera entrada del cuerpo (para Tails)
     if (ram[R.HURT] && !(ram[R.FRAME] & 4)) return;
     drawSprite();
   };

@@ -725,7 +725,9 @@ var SM = window.SM || (window.SM = {});
     Obj.compact();
   };
   Obj.warned = {};
-  var MOVERS = { 0x0F: 1, 0x16: 1, 0x1A: 1, 0x1B: 1, 0x1C: 1, 0x2B: 1 };
+  // los animalitos de la cápsula (18/19) también: su código ya los elimina al salir de
+  // rango (relPos con el margen panorámico), y en pausa se quedaban quietos a la vista
+  var MOVERS = { 0x0F: 1, 0x16: 1, 0x18: 1, 0x19: 1, 0x1A: 1, 0x1B: 1, 0x1C: 1, 0x2B: 1 };
   // $A3ED
   Obj.compact = function () {
     var n = ram[R.OBJ_N], x = 0;

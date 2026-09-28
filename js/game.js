@@ -214,7 +214,8 @@ var SM = window.SM || (window.SM = {});
       var sp0 = ram[0x3C] >> 2;
       SM.Player.animate();
       SM.S3.fixSprite(sp0, ram[0x3C] >> 2);
-      SM.Tails.replace(sp0, ram[0x3C] >> 2);
+      // sólo el cuerpo: el escudo y las estrellas van antes y se dibujan encima de Tails
+      SM.Tails.replace(Math.max(sp0, SM.Player.bodyFrom), ram[0x3C] >> 2);
       SM.ObjDraw.drawAll();
       if (ram[0xB6]) SM.Ending.drawCapsule();
       if (ram[0xB8] >= 4) SM.Boss.draw();
