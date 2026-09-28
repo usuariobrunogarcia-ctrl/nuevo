@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Somari Deluxe — Tráiler</title>
+<title>Somari Deluxe — Trailer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
   /* ============================================================
-     SOMARI DELUXE — Tráiler animado (1920x1080, escalado a la ventana)
+     SOMARI DELUXE — Trailer animado (1920x1080, escalado a la ventana)
      Controles: Enter/clic = empezar · Espacio = pausa · ←/→ = escena
                 F = pantalla completa · R = reiniciar
      URL: trailer.html?scene=N empieza en la escena N
@@ -109,6 +109,11 @@
                      40% { transform: translate(14px, 14px); } 50% { transform: translate(-8px, 6px); } 60% { transform: translate(8px,-6px); } 80% { transform: translate(-4px, 2px); } }
   @keyframes crtOn { 0% { transform: scale(1, .004); filter: brightness(8); } 40% { transform: scale(1, .004); filter: brightness(8); } 70% { transform: scale(1, 1.05); filter: brightness(2); } 100% { transform: scale(1,1); filter: none; } }
   @keyframes drawX { from { transform: scale(0) rotate(-90deg); } }
+  .sprline { filter: drop-shadow(4px 0 0 #fff) drop-shadow(-4px 0 0 #fff) drop-shadow(0 4px 0 #fff) drop-shadow(0 -4px 0 #fff) drop-shadow(10px 12px 0 rgba(0,0,0,.45)); }
+  .card { position: absolute; width: 700px; height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; text-align: center; line-height: 1.8;
+          background: rgba(10,0,40,.82); border: 8px solid #fff; box-shadow: 0 0 0 8px #000, 18px 18px 0 8px rgba(0,0,0,.55); transform: skewX(-8deg); transition: border-color .2s, box-shadow .2s; }
+  .card > * { transform: skewX(8deg); }
+  .card.on { border-color: var(--gold); box-shadow: 0 0 0 8px #000, 0 0 60px 16px rgba(255,212,0,.55); }
   #scene.shake { animation: shake .45s linear; }
 </style>
 </head>
@@ -125,12 +130,13 @@
   </div>
 </div>
 <div id="start">
-  <h1>SOMARI DELUXE<br>TRÁILER</h1>
-  <p>F: pantalla completa · Espacio: pausa · ← →: cambiar escena · R: reiniciar<br>
-     Las pantallas negras de GAMEPLAY son el hueco para insertar tus clips al editar.</p>
-  <div class="go">▶ CLIC O ENTER PARA EMPEZAR</div>
+  <h1>SOMARI DELUXE<br>TRAILER</h1>
+  <p>F: fullscreen · Space: pause · ← →: change scene · R: restart<br>
+     The black GAMEPLAY screens are placeholders for your clips when editing.</p>
+  <div class="go">▶ CLICK OR PRESS ENTER</div>
 </div>
 
+<script src="js/somarigfx.js"></script>
 <script src="js/tailsgfx.js"></script>
 <script>
 'use strict';
@@ -143,110 +149,23 @@ var GAMEPLAY_SEGUNDOS = +params.get('gp') || 6;   // duración de cada pantalla 
 // =============================================================
 //  SPRITES (pixel art)
 // =============================================================
-var NES = { R: '#d82800', S: '#fcb87c', B: '#7c3c00', O: '#2044ec', Y: '#fce000', W: '#ffffff', K: '#101010', G: '#3bdc4a', P: '#ff7ab0', D: '#8a0010' };
-
-// Somari: gorra roja, bigote, peto azul y zapatillas rojas de Sonic.
-var SOMARI = [
-  [ '....RRRRR.....',
-    '...RRRRRRRRR..',
-    '...BBBSSKS....',
-    '..BSBSSSKSSS..',
-    '..BSBBSSSKSSS.',
-    '..BBSSSSKKKK..',
-    '....SSSSSSS...',
-    '...RROORRR....',
-    '..RRROORROORR.',
-    '.RRRROOOOORRRR',
-    '.SSROYOOYORSS.',
-    '.SSSOOOOOOSSS.',
-    '.SSOOOOOOOOSS.',
-    '...OOO..OOO...',
-    '..RRRR..RRRR..',
-    '.RRWRR..RRWRR.' ],
-  [ '....RRRRR.....',
-    '...RRRRRRRRR..',
-    '...BBBSSKS....',
-    '..BSBSSSKSSS..',
-    '..BSBBSSSKSSS.',
-    '..BBSSSSKKKK..',
-    '....SSSSSSS...',
-    '..SRRROORR....',
-    '.SSRRROOROORS.',
-    '.SSRRROOOOORS.',
-    '...ROYOOYOO...',
-    '...OOOOOOOO...',
-    '..OOOOOOOOOO..',
-    '.OOO.....OOO..',
-    'RRRR.....RRRR.',
-    'RWRR......RWRR' ],
-  [ '....RRRRR.....',
-    '...RRRRRRRRR..',
-    '...BBBSSKS....',
-    '..BSBSSSKSSS..',
-    '..BSBBSSSKSSS.',
-    '..BBSSSSKKKK..',
-    '....SSSSSSS...',
-    '...RROORRRSS..',
-    '..RRROORROSSS.',
-    '..RRROOOOORR..',
-    '..SSOYOOYO....',
-    '..SSOOOOOO....',
-    '....OOOOO.....',
-    '....OOOO......',
-    '...RRRRR......',
-    '...RWRRRR.....' ]
-];
-// Enemigo genérico (mariquita robot)
-var BUG = [
-  [ '....RRRRR....',
-    '..RRWRRRRRR..',
-    '.RRWWRRKRRRR.',
-    '.RRRRRRRRKRRK',
-    'RRKRRRRRRRRRK',
-    'RRRRRKRRRRRRK',
-    '.KKKKKKKKKKK.',
-    '..KWK...KWK..',
-    '...K.....K...' ],
-  [ '....RRRRR....',
-    '..RRWRRRRRR..',
-    '.RRWWRRKRRRR.',
-    '.RRRRRRRRKRRK',
-    'RRKRRRRRRRRRK',
-    'RRRRRKRRRRRRK',
-    '.KKKKKKKKKKK.',
-    '.KWK.....KWK.',
-    '..K.......K..' ]
-];
-
-function pixCanvas(rows, pal) {
-  var h = rows.length, w = rows[0].length, c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  var g = c.getContext('2d');
-  for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
-    var ch = rows[y][x];
-    if (ch === '.' || !pal[ch]) continue;
-    g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1);
-  }
-  return c;
-}
-var TG = window.SM && SM.TailsGfx;
+// Somari: js/somarigfx.js (desde somari.png) · Tails: js/tailsgfx.js (desde tails.png)
+var SG = window.SM && SM.SomariGfx, TG = window.SM && SM.TailsGfx;
+var SOMARI_ANIM = { stand: [0], walk: [1, 2, 3, 4, 5, 6, 7], run: [8, 9, 10] };
 var TAILS_ANIM = { idle: [0, 1, 2, 3, 4, 5], walk: [11, 12, 13, 14, 15, 16, 17, 18], run: [19, 20], fly: [37, 38], roll: [51, 52, 53, 54] };
-function tailsCanvas(i) {
-  var f = TG.frames[i], w = f[0], h = f[1], s = f[2], c = document.createElement('canvas');
+function gfxCanvas(G, i) {
+  var f = G.frames[i], w = f[0], h = f[1], s = f[2], c = document.createElement('canvas');
   c.width = w; c.height = h;
   var g = c.getContext('2d');
   for (var k = 0; k < s.length; k++) {
     if (s[k] === '.') continue;
-    g.fillStyle = TG.pal[s.charCodeAt(k) - 97]; g.fillRect(k % w, (k / w) | 0, 1, 1);
+    g.fillStyle = G.pal[s.charCodeAt(k) - 97]; g.fillRect(k % w, (k / w) | 0, 1, 1);
   }
   return c;
 }
-var FR = {
-  somari: SOMARI.map(function (r) { return pixCanvas(r, NES); }),
-  bug: BUG.map(function (r) { return pixCanvas(r, NES); }),
-  tails: {}
-};
-if (TG) for (var k in TAILS_ANIM) FR.tails[k] = TAILS_ANIM[k].map(tailsCanvas);
+var FR = { somari: {}, tails: {} };
+if (SG) for (var k in SOMARI_ANIM) FR.somari[k] = SOMARI_ANIM[k].map(function (i) { return gfxCanvas(SG, i); });
+if (TG) for (var k2 in TAILS_ANIM) FR.tails[k2] = TAILS_ANIM[k2].map(function (i) { return gfxCanvas(TG, i); });
 
 // Sprite animado dentro del DOM
 var anims = [];
@@ -416,10 +335,6 @@ function drawBg(t) {
     g.shadowBlur = 0;
     return;
   }
-  if (bgMode === 'hill') {
-    drawHill(g, 0, 0, W, H, t, 1);
-    return;
-  }
   if (bgMode === 'noise') {
     var d = noiseImg.data;
     for (var p = 0; p < d.length; p += 4) { var v = Math.random() * 255 | 0; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
@@ -429,35 +344,6 @@ function drawBg(t) {
     return;
   }
 }
-// Paisaje tipo "Green Hill" (cielo, nubes, montañas y suelo a cuadros) — también usado dentro de paneles
-function drawHill(g, x0, y0, w, h, t, sp) {
-  g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip(); g.translate(x0, y0);
-  var sky = g.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#2a6cff'); sky.addColorStop(.55, '#7cc8ff'); sky.addColorStop(1, '#d8f4ff');
-  g.fillStyle = sky; g.fillRect(0, 0, w, h);
-  var u = h / 60;
-  g.fillStyle = '#fff';
-  for (var c = 0; c < 7; c++) {
-    var cx = ((c * w / 3.2 - t * 20 * sp) % (w * 2.2) + w * 2.2) % (w * 2.2) - w * .3, cy = h * (0.12 + (c % 3) * 0.08);
-    g.fillRect(cx, cy, 16 * u, 3 * u); g.fillRect(cx + 3 * u, cy - 2 * u, 9 * u, 2 * u); g.fillRect(cx + 5 * u, cy - 4 * u, 5 * u, 2 * u);
-  }
-  g.fillStyle = '#2d9a4a';
-  var mOff = (t * 40 * sp) % (40 * u);
-  for (var m = -1; m < w / (40 * u) + 2; m++) {
-    var mx = m * 40 * u - mOff;
-    g.beginPath(); g.moveTo(mx, h * .72); g.lineTo(mx + 20 * u, h * .42 + (m % 2) * 6 * u); g.lineTo(mx + 40 * u, h * .72); g.fill();
-  }
-  g.fillStyle = '#1f7a38'; g.fillRect(0, h * .7, w, h * .05);
-  var gy = h * .75, ts = 8 * u, off = (t * 160 * sp) % (ts * 2);
-  g.fillStyle = '#5ce04a'; g.fillRect(0, gy, w, 2 * u);
-  g.fillStyle = '#3aa832'; g.fillRect(0, gy + 2 * u, w, u);
-  for (var ty = 0; ty < 4; ty++) for (var tx = -2; tx < w / ts + 2; tx++) {
-    g.fillStyle = (tx + ty) % 2 ? '#b8641c' : '#7a3a0c';
-    g.fillRect(tx * ts - off + (ty % 2 ? 0 : 0), gy + 3 * u + ty * ts, ts, ts);
-  }
-  g.restore();
-}
-
 // ---------- secuencia ----------
 var SCENES = [], idx = -1, sceneT = 0, events = [], update = null, running = false, paused = false;
 function scene(dur, bgm, opt, build, trans) { SCENES.push({ dur: dur, bg: bgm, opt: opt || {}, build: build, trans: trans }); }
@@ -529,22 +415,35 @@ addEventListener('keydown', function (e) {
 });
 
 // =============================================================
-//  GUION DEL TRÁILER
+//  GUION DEL TRÁILER (textos en inglés)
 // =============================================================
+function somari(anim, scale, fps, css) { return sprite(FR.somari[anim], scale, fps, css); }
+
+// Texto con letras desordenadas que luego encajan en su sitio
+function scramble(parent, text, css) {
+  var line = el('div', null, null, css, parent), spans = [];
+  text.split('').forEach(function (ch) {
+    var sp = el('span', null, ch === ' ' ? '&nbsp;' : ch, 'display:inline-block;transition:transform .6s cubic-bezier(.2,1.4,.4,1), color .3s;', line);
+    sp._r = [(Math.random() - .5) * 700, (Math.random() - .5) * 420, (Math.random() - .5) * 140];
+    sp.style.transform = 'translate(' + sp._r[0] + 'px,' + sp._r[1] + 'px) rotate(' + sp._r[2] + 'deg)';
+    spans.push(sp);
+  });
+  return spans;
+}
 
 // 1 · Encendido CRT: 1994
 scene(3.4, 'stars', { speed: .3 }, function (ctx) {
   var c = el('div', 'center', null, 'animation: crtOn 1.2s ease-out both;');
-  el('div', 'xs cyan', 'EN 1994...', A('fadeIn', .5, .9, 'ease'), c);
+  el('div', 'xs cyan', 'BACK IN 1994...', A('fadeIn', .5, .9, 'ease'), c);
   el('div', 'big gold outline', '1994', 'font-size:220px;margin-top:30px;' + A('popIn', .7, 1.3), c);
 });
 
 // 2 · Un juego pirata
 scene(5, 'stars', { speed: .6 }, function (ctx) {
   var c = el('div', 'center');
-  el('div', 'sm', 'EN TAIWÁN APARECIÓ UN CARTUCHO...', A('fadeIn', .6, .2, 'ease'), c);
-  var t = el('div', 'tag mid', '<span>¡PIRATA!</span>', 'margin:60px 0 50px;font-size:110px;' + A('stamp', .45, 1.1), c);
-  el('div', 'xs', 'SIN LICENCIA · SIN PERMISO · SIN VERGÜENZA', 'color:#ccc;' + A('fadeIn', .6, 2, 'ease'), c);
+  el('div', 'sm', 'A STRANGE CARTRIDGE SHOWED UP...', A('fadeIn', .6, .2, 'ease'), c);
+  el('div', 'tag mid', '<span>BOOTLEG!</span>', 'margin:60px 0 50px;font-size:110px;' + A('stamp', .45, 1.1), c);
+  el('div', 'xs', 'NO LICENSE · NO PERMISSION · NO SHAME', 'color:#ccc;' + A('fadeIn', .6, 2, 'ease'), c);
   ctx.at(1.35, function () { shake(); sparkBurst(960, 560, 50, ['#fff', '#e8231a', '#ffd400']); });
 }, 'flash');
 
@@ -558,17 +457,18 @@ scene(5.5, 'stars', { speed: 1.2, c1: '#000418', c2: '#10224a' }, function (ctx)
   el('div', 'outline', '=', 'font-size:84px;margin:40px 0 10px;' + A('popIn', .4, 1.9), c);
   var s = el('div', 'gold outline glitch', 'SOMARI', 'font-size:150px;' + A('zoomOut', .5, 2.4, 'ease-out'), c);
   s.setAttribute('data-text', 'SOMARI');
-  var sp = sprite(FR.somari, 9, 10, 'position:absolute;bottom:60px;left:-200px;');
+  var sp = somari('run', 7, 14, 'position:absolute;bottom:50px;left:-300px;');
+  sp.classList.add('sprline');
   sceneEl.appendChild(sp);
   ctx.at(2.5, function () { flash(.3); shake(); });
-  ctx.update = function (t) { sp.style.left = (-200 + Math.max(0, t - 2.6) * 900) + 'px'; };
+  ctx.update = function (t) { sp.style.left = (-300 + Math.max(0, t - 2.6) * 900) + 'px'; };
 });
 
 // 4 · Lleno de defectos
 scene(7, 'noise', { dark: .78 }, function (ctx) {
   var hb = el('div', 'abs mid outline red', null, 'left:0;right:0;top:110px;text-align:center;' + A('fadeIn', .2, .1, 'steps(2)'));
-  el('span', 'glitch', '...PERO LLENO DE DEFECTOS', null, hb).setAttribute('data-text', '...PERO LLENO DE DEFECTOS');
-  var list = ['FÍSICAS RESBALADIZAS', 'ENEMIGOS MAL COLOCADOS', 'PANTALLA RECORTADA', 'COLISIONES INJUSTAS', 'PARPADEOS Y TIRONES'];
+  el('span', 'glitch', '...BUT FULL OF FLAWS', null, hb).setAttribute('data-text', '...BUT FULL OF FLAWS');
+  var list = ['SLIPPERY PHYSICS', 'BADLY PLACED ENEMIES', 'CRAMPED SCREEN', 'UNFAIR COLLISIONS', 'FLICKER AND STUTTER'];
   var box = el('div', 'abs', null, 'left:50%;top:300px;transform:translateX(-50%);display:flex;flex-direction:column;gap:42px;');
   list.forEach(function (txt, i) {
     var d = .9 + i * .85;
@@ -580,25 +480,25 @@ scene(7, 'noise', { dark: .78 }, function (ctx) {
 }, 'cut');
 
 // 5 · Gameplay del original
-gameplay('EL SOMARI ORIGINAL<br><span class="gold">(1994)</span>', 'Así se jugaba... más o menos');
+gameplay('THE ORIGINAL SOMARI<br><span class="gold">(1994)</span>', 'This is how it played... sort of');
 
 // 6 · Hasta ahora
 scene(3.2, 'noise', { dark: .3 }, function (ctx) {
   var c = el('div', 'center');
-  el('div', 'big outline', 'HASTA', A('slideL', .5, .2), c);
-  el('div', 'big gold outline', 'AHORA.', A('slideR', .5, .6), c);
+  el('div', 'big outline', 'UNTIL', A('slideL', .5, .2), c);
+  el('div', 'big gold outline', 'NOW.', A('slideR', .5, .6), c);
   ctx.at(1.2, function () { bgOpt = { dark: 1 }; shake(); flash(.4); });
 }, 'cut');
 
 // 7 · Una recreación que lo mejora todo
 scene(4.2, 'stars', { speed: 3, c1: '#000', c2: '#1a0a40' }, function (ctx) {
   var c = el('div', 'center', null, 'gap:30px;');
-  var words = [['UNA', ''], ['RECREACIÓN', 'cyan'], ['QUE LO', ''], ['MEJORA', 'gold'], ['TODO', 'gold']];
+  var words = [['A', ''], ['REMAKE', 'cyan'], ['THAT', ''], ['IMPROVES', 'gold'], ['EVERYTHING', 'gold']];
   var line1 = el('div', 'mid outline', null, 'display:flex;gap:40px;', c), line2 = el('div', 'big outline', null, 'display:flex;gap:60px;', c);
   words.forEach(function (w, i) {
-    el('span', w[1], w[0], A('wordIn', .5, .2 + i * .45), i < 3 ? line1 : line2);
+    el('span', w[1], w[0], A('wordIn', .5, .2 + i * .4), i < 4 ? line1 : line2);
   });
-  ctx.at(2.2, function () { shake(); sparkBurst(960, 640, 40, ['#ffd400', '#fff', '#28e0ff']); });
+  ctx.at(2, function () { shake(); sparkBurst(960, 640, 40, ['#ffd400', '#fff', '#28e0ff']); });
 }, 'wipe');
 
 // 8 · Revelación del logo
@@ -610,118 +510,85 @@ scene(6.5, 'rays', { c1: '#ff7a00', c2: '#ffb400', speed: .35 }, function (ctx) 
   el('div', 'shine', null, null, logo);
   ctx.at(.5, function () { flash(.6); shake(); ringBurst(960, 480, 40, 20); });
   ctx.at(1.3, function () { shake(); sparkBurst(960, 720, 40, ['#fff', '#ff3b30']); });
-  var sp = sprite(FR.somari, 8, 12, 'position:absolute;bottom:40px;');
+  var sp = somari('run', 6, 14, 'position:absolute;bottom:40px;');
+  sp.classList.add('sprline');
   sceneEl.appendChild(sp);
-  ctx.update = function (t) { sp.style.left = (-160 + Math.max(0, t - 1.8) * 1100) + 'px'; };
+  ctx.update = function (t) { sp.style.left = (-240 + Math.max(0, t - 1.8) * 1100) + 'px'; };
 }, 'flash');
 
 // 9 · Elige tus físicas
 scene(7, 'grid', { line: '#28e0ff' }, function (ctx) {
-  el('div', 'abs mid outline', 'ELIGE TUS <span class="gold">FÍSICAS</span>', 'left:0;right:0;top:70px;text-align:center;' + A('slideD', .5, .1));
-  var L = el('div', 'panel', null, 'left:120px;top:250px;width:760px;height:540px;background:#000;' + A('slideL', .6, .5));
-  var R = el('div', 'panel', null, 'right:120px;top:250px;width:760px;height:540px;border-color:var(--gold);' + A('slideR', .6, .7));
-  // panel izquierdo: paleta "NES apagada"
-  var lc = document.createElement('canvas'); lc.width = 760; lc.height = 540; lc.style.cssText = 'display:block;filter:saturate(.35) contrast(1.1) sepia(.35);';
-  L.appendChild(lc);
-  var rc = document.createElement('canvas'); rc.width = 760; rc.height = 540; rc.style.display = 'block';
-  R.appendChild(rc);
-  el('div', 'abs sm outline-s', 'ORIGINAL', 'left:30px;top:24px;font-size:34px;', L);
-  el('div', 'abs sm outline-s gold', 'MEJORADAS', 'left:30px;top:24px;font-size:34px;', R);
-  el('div', 'abs xs', 'Como en 1994', 'left:30px;bottom:24px;color:#ddd;', L);
-  el('div', 'abs xs', 'Fluidas y precisas', 'left:30px;bottom:24px;color:#fff;', R);
-  el('div', 'abs big outline pink', 'VS', 'left:0;right:0;top:450px;text-align:center;font-size:110px;' + A('popIn', .5, 1.3, null, 'pulse .8s ease-in-out 2s infinite'));
-  el('div', 'abs sm outline-s', '¡TÚ DECIDES CÓMO JUGAR!', 'left:0;right:0;bottom:90px;text-align:center;font-size:40px;' + A('slideU', .5, 2.2));
+  el('div', 'abs mid outline', 'CHOOSE YOUR <span class="gold">PHYSICS</span>', 'left:0;right:0;top:80px;text-align:center;' + A('slideD', .5, .1));
+  var L = el('div', 'card', null, 'left:170px;top:300px;' + A('slideL', .6, .5));
+  var R = el('div', 'card', null, 'right:170px;top:300px;' + A('slideR', .6, .7));
+  el('div', 'outline-s', 'ORIGINAL', 'font-size:64px;', L);
+  el('div', 'xs', 'Faithful to the<br>1994 cartridge', 'color:#ccd;', L);
+  el('div', 'outline-s gold', 'IMPROVED', 'font-size:64px;', R);
+  el('div', 'xs', 'Smooth, precise<br>modern control', 'color:#fff;', R);
+  el('div', 'abs big outline pink', 'VS', 'left:0;right:0;top:420px;text-align:center;font-size:110px;' + A('popIn', .5, 1.3, null, 'pulse .8s ease-in-out 2s infinite'));
+  el('div', 'abs sm outline-s', 'YOU DECIDE HOW TO PLAY!', 'left:0;right:0;bottom:110px;text-align:center;font-size:44px;' + A('slideU', .5, 2.2));
   ctx.at(1.4, function () { shake(); flash(.25, '#ff2fb4'); });
-  var lg = lc.getContext('2d'), rg = rc.getContext('2d');
-  lg.imageSmoothingEnabled = rg.imageSmoothingEnabled = false;
+  var sel = -1;
   ctx.update = function (t) {
-    // original: movimiento a tirones y derrape
-    var tq = Math.floor(t * 7) / 7;
-    drawHill(lg, 0, 0, 760, 540, tq, .6);
-    var cyc = (tq * 0.55) % 1, lx = -80 + cyc * 900 + (Math.floor(t * 7) % 3) * 6, ly = 405 - 128 + (Math.floor(t * 3) % 2 ? 0 : 0);
-    lg.drawImage(FR.somari[Math.floor(t * 4) % 2], lx, ly, 14 * 8, 16 * 8);
-    // mejoradas: suave, con salto y estela
-    drawHill(rg, 0, 0, 760, 540, t, 1);
-    for (var k = 4; k >= 0; k--) {
-      var tt = t - k * 0.05, c2 = (tt * 0.55) % 1, x = -80 + c2 * 900, jump = Math.max(0, Math.sin(c2 * Math.PI * 2)) * 150;
-      rg.globalAlpha = k ? 0.12 * (5 - k) : 1;
-      rg.drawImage(FR.somari[k ? 2 : Math.floor(t * 12) % 3], x, 405 - 128 - jump, 14 * 8, 16 * 8);
-    }
-    rg.globalAlpha = 1;
+    if (t < 2) return;
+    var s2 = Math.floor((t - 2) / .9) % 2;
+    if (s2 !== sel) { sel = s2; L.classList.toggle('on', !sel); R.classList.toggle('on', !!sel); sparkBurst(sel ? 1400 : 520, 490, 16, ['#ffd400', '#fff']); }
   };
 }, 'wipe');
 
-gameplay('FÍSICAS <span class="gold">ORIGINALES</span>', 'Fieles al cartucho de 1994');
-gameplay('FÍSICAS <span class="gold">MEJORADAS</span>', 'Control preciso, inercia y saltos pulidos');
+gameplay('<span class="gold">ORIGINAL</span> PHYSICS', 'True to the 1994 cartridge');
+gameplay('<span class="gold">IMPROVED</span> PHYSICS', 'Tighter control, smoother momentum, better jumps');
 
-// 10 · Mejor posición de enemigos
-scene(7.5, 'stars', { speed: .8, c1: '#150018', c2: '#3a0a2a' }, function (ctx) {
-  el('div', 'abs mid outline', 'MEJOR POSICIÓN DE <span class="red">ENEMIGOS</span>', 'left:0;right:0;top:70px;text-align:center;font-size:58px;' + A('slideD', .5, .1));
-  var P = el('div', 'panel', null, 'left:160px;top:210px;width:1600px;height:620px;' + A('popIn', .5, .4));
-  var cv = document.createElement('canvas'); cv.width = 1600; cv.height = 620; cv.style.display = 'block'; P.appendChild(cv);
-  var g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-  var status = el('div', 'abs sm outline-s red', 'ANTES', 'left:30px;top:24px;font-size:36px;', P);
-  el('div', 'abs sm outline-s', 'RETOS JUSTOS · SIN TRAMPAS BARATAS', 'left:0;right:0;bottom:90px;text-align:center;font-size:36px;' + A('slideU', .5, 3.6));
-  // [x malo, y malo, x bueno] — y bueno = suelo
-  var gy = 620 * .75 - 9 * 7;
-  var E = [[70, gy, 330], [120, gy, 620], [95, gy - 70, 900], [1180, gy + 70, 1180], [1480, 120, 1450]];
-  var marks = [];
-  E.forEach(function (e, i) { marks.push(el('div', 'abs red outline-s', '✖', 'font-size:44px;left:' + (e[0] + 20) + 'px;top:' + (e[1] - 60) + 'px;' + A('popIn', .3, 1 + i * .15), P)); });
-  ctx.at(2.5, function () {
-    status.innerHTML = 'DESPUÉS'; status.className = 'abs sm outline-s green'; flash(.3, '#3bdc4a'); shake();
-    marks.forEach(function (m) { m.remove(); });
-    E.forEach(function (e, i) { el('div', 'abs green outline-s', '✔', 'font-size:44px;left:' + (e[2] + 20) + 'px;top:' + (gy - 70) + 'px;' + A('popIn', .35, .6 + i * .12), P); });
+// 10 · Mejor posición de enemigos (las letras desordenadas encajan en su sitio)
+scene(7, 'stars', { speed: .8, c1: '#150018', c2: '#3a0a2a' }, function (ctx) {
+  var c = el('div', 'center', null, 'gap:40px;');
+  el('div', 'mid outline', 'BETTER', A('slideD', .5, .1), c);
+  var spans = scramble(c, 'ENEMY', 'font-size:150px;color:var(--red);' + A('fadeIn', .3, .3, 'ease'))
+    .concat(scramble(c, 'PLACEMENT', 'font-size:110px;color:var(--red);' + A('fadeIn', .3, .3, 'ease')));
+  spans.forEach(function (sp) { sp.classList.add('outline'); });
+  var sub = el('div', 'abs sm outline-s', 'FAIR CHALLENGES · NO CHEAP HITS', 'left:0;right:0;bottom:90px;text-align:center;font-size:40px;opacity:0;');
+  ctx.at(2.2, function () {
+    spans.forEach(function (sp, i) { sp.style.transitionDelay = (i * .03) + 's'; sp.style.transform = 'none'; sp.style.color = i < 5 ? 'var(--green)' : '#fff'; });
+    flash(.3, '#3bdc4a');
   });
+  ctx.at(2.8, function () { shake(); sparkBurst(960, 540, 60, ['#3bdc4a', '#fff', '#ffd400']); sub.style.cssText += A('slideU', .5, 0); });
   ctx.update = function (t) {
-    drawHill(g, 0, 0, 1600, 620, 0, 0);
-    var k = Math.min(1, Math.max(0, (t - 2.5) / .7)), ease = 1 - Math.pow(1 - k, 3);
-    E.forEach(function (e, i) {
-      var x = e[0] + (e[2] - e[0]) * ease, y = e[1] + (gy - e[1]) * ease;
-      if (k > 0 && k < 1) { g.strokeStyle = 'rgba(255,255,255,.8)'; g.setLineDash([12, 12]); g.lineWidth = 4; g.beginPath(); g.moveTo(e[0] + 45, e[1] + 30); g.lineTo(x + 45, y + 30); g.stroke(); g.setLineDash([]); }
-      if (k === 0 && i === 3) { g.save(); g.beginPath(); g.rect(0, 0, 1600, 620 * .75 + 18); g.clip(); }
-      g.drawImage(FR.bug[Math.floor(t * 6 + i) % 2], x, y + (k >= 1 ? Math.sin(t * 6 + i) * 3 : 0), 13 * 7, 9 * 7);
-      if (k === 0 && i === 3) g.restore();
+    if (t > 2.2) return;
+    spans.forEach(function (sp, i) {
+      var j = Math.sin(t * 20 + i * 2) * 8;
+      sp.style.transform = 'translate(' + (sp._r[0] + j) + 'px,' + (sp._r[1] - j) + 'px) rotate(' + (sp._r[2] + j) + 'deg)';
     });
-    var px = 80 + ((t * 260) % 1500);
-    g.drawImage(FR.somari[Math.floor(t * 12) % 3], k >= 1 ? px : 1700, gy - 60, 14 * 5, 16 * 5);
   };
 }, 'wipe');
 
-gameplay('NUEVA COLOCACIÓN<br>DE <span class="red">ENEMIGOS</span>', 'Niveles rediseñados para ser justos y divertidos');
+gameplay('NEW <span class="red">ENEMY</span> PLACEMENT', 'Levels reworked to be fair and fun');
 
-// 11 · Pantalla ancha
-scene(7.5, 'grid', { line: '#ffd400', speed: 2 }, function (ctx) {
-  el('div', 'abs mid outline', 'PANTALLA <span class="cyan">ANCHA</span>', 'left:0;right:0;top:60px;text-align:center;' + A('slideD', .5, .1));
-  var F = el('div', 'panel', null, 'left:50%;top:560px;width:600px;height:450px;transform:translate(-50%,-50%);border-color:#fff;transition:width .9s cubic-bezier(.7,-0.2,.3,1.3), height .9s cubic-bezier(.7,-0.2,.3,1.3), border-color .3s;' + A('fadeIn', .4, .3, 'ease'));
-  var cv = document.createElement('canvas'); cv.width = 1400; cv.height = 788;
-  cv.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1400px;height:788px;';
-  F.appendChild(cv);
-  var g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-  var lbl = el('div', 'abs outline-s', '4:3', 'left:50%;top:250px;transform:translateX(-50%);font-size:44px;' + A('popIn', .4, .6));
-  var sub = el('div', 'abs sm outline-s', 'VE MÁS · REACCIONA ANTES', 'left:0;right:0;bottom:30px;text-align:center;font-size:36px;' + A('slideU', .5, 3.3));
+// 11 · Pantalla ancha (marco abstracto que pasa de 4:3 a 16:9)
+scene(7, 'grid', { line: '#ffd400', speed: 2 }, function (ctx) {
+  el('div', 'abs mid outline', '<span class="cyan">WIDESCREEN</span> MODE', 'left:0;right:0;top:60px;text-align:center;' + A('slideD', .5, .1));
+  var F = el('div', 'panel', null, 'left:50%;top:570px;width:600px;height:450px;transform:translate(-50%,-50%);border-color:#fff;' +
+    'background:repeating-linear-gradient(135deg, #1b0a4a 0 40px, #26105e 40px 80px);transition:width .9s cubic-bezier(.7,-0.2,.3,1.3), height .9s cubic-bezier(.7,-0.2,.3,1.3), border-color .3s;' + A('fadeIn', .4, .3, 'ease'));
+  var lbl = el('div', 'center big outline', '4:3', 'font-size:140px;', F);
+  var arL = el('div', 'abs big outline gold', '◀', 'left:120px;top:500px;font-size:100px;opacity:0;');
+  var arR = el('div', 'abs big outline gold', '▶', 'right:120px;top:500px;font-size:100px;opacity:0;');
+  el('div', 'abs sm outline-s', 'SEE MORE · REACT SOONER', 'left:0;right:0;bottom:30px;text-align:center;font-size:40px;' + A('slideU', .5, 3.3));
   ctx.at(1.9, function () {
-    F.style.width = '1400px'; F.style.height = '788px'; F.style.borderColor = 'var(--gold)'; F.style.top = '600px';
-    lbl.innerHTML = '16:9'; lbl.className = 'abs outline-s gold'; lbl.style.top = '170px'; lbl.style.fontSize = '52px';
+    F.style.width = '1400px'; F.style.height = '788px'; F.style.borderColor = 'var(--gold)';
+    lbl.innerHTML = '16:9'; lbl.className = 'center big outline gold'; lbl.style.fontSize = '200px'; lbl.style.cssText += A('popIn', .5, .3);
+    arL.style.cssText += A('slideR', .5, 0) + 'opacity:1;'; arR.style.cssText += A('slideL', .5, 0) + 'opacity:1;';
     shake(); flash(.3);
   });
   ctx.at(2.6, function () { ringBurst(260, 600, 14, 14); ringBurst(1660, 600, 14, 14); });
-  ctx.update = function (t) {
-    drawHill(g, 0, 0, 1400, 788, t, 1);
-    var gy = 788 * .75;
-    for (var r = 0; r < 12; r++) { var rx = ((r * 150 - t * 160) % 1800 + 1800) % 1800 - 200; drawRing(g, rx, gy - 180 - Math.sin(r) * 60, 20, t + r); }
-    g.drawImage(FR.bug[Math.floor(t * 6) % 2], ((1500 - t * 220) % 1600 + 1600) % 1600 - 100, gy - 63, 91, 63);
-    g.drawImage(FR.somari[Math.floor(t * 12) % 3], 640, gy - 128 - Math.abs(Math.sin(t * 2.2)) * 120, 112, 128);
-  };
 }, 'wipe');
 
-gameplay('MODO <span class="cyan">PANTALLA ANCHA</span> 16:9', 'Todo el nivel a la vista');
+gameplay('<span class="cyan">WIDESCREEN</span> 16:9 MODE', 'See more of every level');
 
 // 12 · Falso final
 scene(4.2, 'none', {}, function (ctx) {
   var c = el('div', 'center');
   var d = el('div', 'mid outline', '', 'min-height:90px;', c);
-  var txt = 'Y UNA COSA MÁS...';
-  ctx.update = function (t) { var n = Math.max(0, Math.floor((t - .6) * 10)); d.textContent = txt.slice(0, n) + (Math.floor(t * 3) % 2 && n < txt.length + 8 ? '_' : ''); };
+  var txt = 'AND ONE MORE THING...';
+  ctx.update = function (t) { var n = Math.max(0, Math.floor((t - .6) * 10)); d.textContent = txt.slice(0, n) + (Math.floor(t * 3) % 2 ? '_' : ''); };
 }, 'cut');
 
 // 13 · Sorpresa: ¡Tails!
@@ -731,7 +598,7 @@ scene(8.5, 'rays', { c1: '#050505', c2: '#1a1a1a', speed: .6 }, function (ctx) {
   wrap.appendChild(tl);
   var q = el('div', 'abs big outline', '?', 'left:0;right:0;top:520px;text-align:center;font-size:160px;' + A('popIn', .5, .5, null, 'floaty 1s ease-in-out 1s infinite'));
   var title = el('div', 'center', null, 'justify-content:flex-end;padding-bottom:70px;display:none;');
-  el('div', 'mid outline', '¡AHORA PUEDES JUGAR COMO', 'font-size:52px;' + A('slideL', .5, .05), title);
+  el('div', 'mid outline', 'NOW YOU CAN PLAY AS', 'font-size:56px;' + A('slideL', .5, .05), title);
   el('div', 'big', 'TAILS!', 'font-size:210px;color:#fff;text-shadow:0 8px 0 #ffae21,0 16px 0 #e06a00,0 24px 0 #000,8px 0 0 #000,-8px 0 0 #000,0 -8px 0 #000,8px 24px 0 #000,-8px 24px 0 #000,8px -8px 0 #000,-8px -8px 0 #000;' + A('zoomOut', .5, .3, 'cubic-bezier(.2,.8,.3,1.2)', 'pulse 1s ease-in-out 1.2s infinite'), title);
   ctx.at(2.6, function () {
     flash(.9); shake();
@@ -747,7 +614,7 @@ scene(8.5, 'rays', { c1: '#050505', c2: '#1a1a1a', speed: .6 }, function (ctx) {
   ctx.update = function (t) { if (t > 2.6) wrap.style.transform = 'translateX(-50%) translateY(' + (Math.sin(t * 3) * 25) + 'px)'; };
 }, 'cut');
 
-gameplay('JUGANDO COMO <span style="color:#ffae21">TAILS</span>', '¡Con vuelo, como en Sonic 3!');
+gameplay('PLAYING AS <span style="color:#ffae21">TAILS</span>', 'Fly just like in Sonic 3!');
 
 // 14 · Cierre
 scene(9, 'grid', { line: '#ff2fb4', speed: 1.6 }, function (ctx) {
@@ -756,14 +623,14 @@ scene(9, 'grid', { line: '#ff2fb4', speed: 1.6 }, function (ctx) {
   el('div', 'somari', 'SOMARI', 'font-size:160px;', logo);
   el('div', 'deluxe', '<span>DELUXE</span>', 'font-size:54px;' + A('drop', .7, .7, 'ease-out'), logo);
   el('div', 'shine', null, null, logo);
-  var soon = el('div', 'sm outline-s gold', 'PRÓXIMAMENTE', 'margin-top:70px;font-size:48px;letter-spacing:8px;' + A('popIn', .5, 1.6, null, 'blink 1.2s steps(2) 3s infinite'), c);
-  var runners = el('div', 'abs', null, 'bottom:70px;left:-400px;display:flex;align-items:flex-end;gap:40px;');
-  runners.appendChild(sprite(FR.somari, 8, 12));
-  if (TG) runners.appendChild(sprite(FR.tails.run, 5, 12));
+  el('div', 'sm outline-s gold', 'COMING SOON', 'margin-top:70px;font-size:48px;letter-spacing:8px;' + A('popIn', .5, 1.6, null, 'blink 1.2s steps(2) 3s infinite'), c);
+  var runners = el('div', 'abs', null, 'bottom:60px;left:-500px;display:flex;align-items:flex-end;gap:40px;');
+  var sm = somari('run', 6, 14); sm.classList.add('sprline'); runners.appendChild(sm);
+  if (TG) runners.appendChild(sprite(FR.tails.run, 6, 12, 'filter:drop-shadow(10px 12px 0 rgba(0,0,0,.45));'));
   ctx.at(.6, function () { flash(.5); shake(); ringBurst(960, 300, 36, 20); });
   ctx.at(2, function () { ringRain(40); });
   ctx.update = function (t) {
-    runners.style.left = (-400 + Math.max(0, t - 1) * 520) + 'px';
+    runners.style.left = (-500 + Math.max(0, t - 1) * 520) + 'px';
     if (t > 7.6) sceneEl.style.opacity = Math.max(0, 1 - (t - 7.6) / 1.2);
   };
 }, 'flash');
