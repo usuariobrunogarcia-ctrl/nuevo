@@ -199,6 +199,7 @@ var SM = window.SM || (window.SM = {});
     options: function () {
       var s = SM.settings || {};
       return [
+        { label: 'PERSONAJE', value: s.tails ? 'TAILS' : 'SOMARI', toggle: function () { SM.toggleSetting('tails'); } },
         { label: 'VISTA', value: s.wide ? 'PANORÁMICA' : 'ORIGINAL', toggle: function () { SM.toggleWide(); } },
         { label: 'FÍSICA', value: s.s3 ? 'SONIC 3' : 'ORIGINAL', toggle: function () { SM.togglePhysics(); } },
         { label: 'PUNTERÍA BUZZ BOMBER', value: s.buzzFix ? 'FIXED' : 'ORIGINAL', toggle: function () { SM.toggleSetting('buzzFix'); } },

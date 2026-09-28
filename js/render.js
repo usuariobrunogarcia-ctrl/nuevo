@@ -145,7 +145,9 @@ SM.Render = {
         }
       }
     }
+    var im = S.img;
     for (var k = 63; k >= 0; k--) {
+      if (im && k === im.i) this.drawImage(im, ox);
       if (!S.on[k]) continue;
       var x = S.x[k] + ox, y = S.y[k] + 1, t = S.t[k], a = S.a[k];
       if (x <= -8 || x >= W || y <= -8 || y >= H) continue;
@@ -164,6 +166,18 @@ SM.Render = {
           if (behind && op[row + xx]) continue;
           fb[row + xx] = colors[pa | c];
         }
+      }
+    }
+  },
+  // Imagen de 32 bits (0 = transparente) en coordenadas de la pantalla lógica
+  drawImage: function (im, ox) {
+    var W = this.W, H = this.H, fb = this.fb, g = im.im, x0 = im.x + ox, y0 = im.y;
+    for (var y = 0; y < g.h; y++) {
+      var yy = y0 + y;
+      if (yy < 0 || yy >= H) continue;
+      for (var x = 0; x < g.w; x++) {
+        var xx = x0 + x, c = g.px[y * g.w + x];
+        if (c && xx >= 0 && xx < W) fb[yy * W + xx] = c;
       }
     }
   },

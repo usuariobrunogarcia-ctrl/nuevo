@@ -61,7 +61,7 @@ var SM = window.SM || (window.SM = {});
     X: 0, Y: 0,                 // posición del centro en 1/256 de píxel
     xv: 0, yv: 0, gv: 0, angle: 0,
     air: false, roll: false, rollJump: false, push: false, left: false, onObj: false,
-    jumping: false, spindash: false, sdCount: 0, moveLock: 0, stick: false,
+    jumping: false, spindash: false, sdCount: 0, moveLock: 0, stick: false, fly: 0, flyTime: 0,
     yRad: 19, xRad: 9, anim: 5, layer: 0, hurt: false, spring: false, water: false
   };
   var S3 = SM.S3 = { P: P, enabled: false, somari: false };
@@ -387,10 +387,11 @@ var SM = window.SM || (window.SM = {});
     addY(5);
     return true;
   }
-  function jumpHeight() {                   // Sonic_JumpHeight
+  function jumpHeight() {                   // Sonic_JumpHeight / Tails_JumpHeight
     if (P.jumping) {
       var cap = P.water ? -0x200 : -0x400;
-      if (cap > P.yv && !(held & ABC)) P.yv = cap;
+      if (cap > P.yv) { if (!(held & ABC)) P.yv = cap; return; }
+      if (SM.Tails && SM.Tails.active()) testFlight();
       return;
     }
     if (!P.spindash && P.yv < -0xFC0) P.yv = -0xFC0;
@@ -495,6 +496,7 @@ var SM = window.SM || (window.SM = {});
   }
   function landFlags() {
     P.air = false; P.push = false; P.rollJump = false; P.jumping = false; P.spring = false;
+    P.fly = 0;
   }
   function touchFloor() {                   // Player_TouchFloor
     var old = P.yRad;
@@ -581,7 +583,37 @@ var SM = window.SM || (window.SM = {});
     rollRepel(); rollSpeed(); levelBound();
     moveSprite(false); anglePos(); slopeRepel();
   }
+  // ---------------- vuelo de Tails (Tails_Test_For_Flight / Tails_Move_FlySwim) ----------------
+  function testFlight() {
+    if (P.fly || !(pressed & ABC)) return;
+    if (P.roll) {
+      P.roll = false; addY(P.yRad - 19); P.yRad = 19; P.xRad = 9;
+    }
+    P.rollJump = false; P.fly = 1; P.flyTime = (8 * 60) >> 1;
+  }
+  function flyMove() {
+    if ((ram[R.FRAME] & 1) && P.flyTime) P.flyTime--;
+    if (P.fly !== 1) {
+      if (P.yv >= -0x100) {
+        P.yv -= 0x20;
+        if (++P.fly === 0x20) P.fly = 1;
+      } else P.fly = 1;
+    } else {
+      if ((pressed & ABC) && P.yv >= -0x100 && P.flyTime) P.fly = 2;
+      P.yv += 8;
+    }
+    // no sale por arriba del nivel
+    if (yi() <= 0x10 && P.yv < 0) P.yv = 0;
+  }
+  // 0 = no vuela, 1 = volando, 2 = cansado
+  S3.flying = function () { return P.fly ? (P.flyTime ? 1 : 2) : 0; };
   function mdAir() {                        // MdAir y MdJump son iguales
+    if (P.fly) {                            // Tails_FlyingSwimming
+      flyMove(); chgJumpDir(); levelBound();
+      moveSprite(false);
+      jumpAngle(); doLevelCollision();
+      return;
+    }
     jumpHeight(); chgJumpDir(); levelBound();
     moveSprite(true);
     if (P.water) P.yv -= 0x28;
@@ -628,6 +660,7 @@ var SM = window.SM || (window.SM = {});
     P.gv = dir * px * 256; P.xv = P.gv;
     P.yv = P.air ? ((fl & 4) ? -1 : 1) * t1D(0xAC62 + (ram[R.VSPD] >> 4)) * 256 : 0;
     P.jumping = false; P.rollJump = false; P.spindash = false; P.hurt = false; P.onObj = false;
+    P.fly = 0;
     P.push = false; P.moveLock = 0; P.anim = P.roll ? 2 : 0;
     P.layer = ram[R.COL_8B] ? 1 : 0;
     P.water = !!ram[R.WATER];
@@ -735,7 +768,7 @@ var SM = window.SM || (window.SM = {});
     }
     // daño
     if (st === 0x0A && last.st !== 0x0A) {
-      P.hurt = true; P.air = true; P.roll = false; P.spindash = false; P.jumping = false;
+      P.hurt = true; P.air = true; P.roll = false; P.spindash = false; P.jumping = false; P.fly = 0;
       if (P.yRad !== 19) { addY(P.yRad - 19); }
       P.yRad = 19; P.xRad = 9; P.angle = 0; P.onObj = false;
       P.yv = P.water ? -0x200 : -0x400;
