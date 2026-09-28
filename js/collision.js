@@ -860,6 +860,7 @@ var SM = window.SM || (window.SM = {});
       if (ram[AGAIN] === 0) return;
     }
   }
+  SM.Collision.dispatch = dispatch;
   // $AC82: dos sensores en x+7 y x-7 a la altura de los pies
   SM.Collision.player = function () {
     var x = ((ram[R.NX_HI] << 8) | ram[R.NX_LO]) + 7;

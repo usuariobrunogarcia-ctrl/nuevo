@@ -379,7 +379,8 @@ var SM = window.SM || (window.SM = {});
       var s = ram[SXL + x] + ram[W9F];
       if (s <= 0xFF && (s + 8) <= 0xFF) return;
     }
-    if (ram[R.ANIM] === 8) {                 // rodando/saltando: se rompe
+    // rodando/saltando: se rompe (con la física de S3 también al rodar por el suelo)
+    if (ram[R.ANIM] === 8 || (SM.S3.enabled && SM.S3.attacking())) {
       if (ram[R.PFLAGS] & 0x0C) return boxSide(x);
       ram[R.VSPD] = 0x30; ram[R.PFLAGS] |= 0x0C; ram[R.SFX] = 5;
       var t = ram[TYPE + x];
