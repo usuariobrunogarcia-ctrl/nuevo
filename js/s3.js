@@ -760,8 +760,9 @@ var SM = window.SM || (window.SM = {});
       if (st === 0x0D) P.push = true;
     }
     if (dy) addY(dy);
-    // golpe al jefe ($9861): rebota
-    if (ram[0xCD] === 0x32 && last.cd !== 0x32) {
+    // golpe al jefe ($9861): rebota. El jefe pone $CD = $32 y en el mismo cuadro lo
+    // decrementa ($9612), así que aquí ya vale $31: basta con que haya subido.
+    if (ram[0xCD] > last.cd) {
       P.xv = -P.xv; P.gv = -P.gv;
       if (P.air && P.yv > 0) P.yv = -P.yv;
       return;
