@@ -36,6 +36,8 @@ var SM = window.SM || (window.SM = {});
 
   // ---------- presentación ----------
   TI.start = function () {
+    if (SM.UI) SM.UI.hide();
+    SM.Fade.set(0);
     for (var i = 0; i < 0x800; i++) ram[i] = 0;
     ram[R.MUSIC] = 0; ram[R.IRQMODE] = 0;
     SM.Game.viewX = 0;
@@ -80,6 +82,7 @@ var SM = window.SM || (window.SM = {});
   // pantalla apagada mientras se prepara el título ($C349)
   function blank() {
     SM.Game.nmi();
+    SM.Fade.set(1);
     SM.Render.pal.fill(0x0F); SM.Render.clear();
     if (--wait === 0) title();
   }
@@ -154,21 +157,10 @@ var SM = window.SM || (window.SM = {});
     SM.Game.nmi();
     drawTitle();
     ram[R.NT_SEL] = (ram[R.FRAME] & 0x20) ? 0 : 2;
-    if (ram[R.JOYP] & 0x10) {
-      // $81EB: zona/acto de la tabla $82E2 y desvanecimiento
-      ram[R.ZONE] = T(0x82E2); ram[R.ACT] = T(0x82E3);
+    if ((ram[R.JOYP] & 0x10) && !SM.Fade.busy()) {
+      // en el original START empieza la partida ($81EB); aquí lleva al menú principal
       ram[R.MUSIC] = 0; ram[R.SFX] = 0;
-      ram[0x333] = 5;
-      SM.Game.scene = fadeOut;
-    }
-  }
-  function fadeOut() {
-    SM.Game.nmi();
-    if (!(ram[R.FRAME] & 3)) SM.Game.palStep();
-    drawTitle();
-    if (ram[0x333] === 9) {
-      ram[R.IRQMODE] = 0xFF;
-      SM.Game.newGame(ram[R.ZONE], ram[R.ACT]);
+      SM.Fade.go(function () { ram[R.IRQMODE] = 0xFF; SM.Menu.open(); });
     }
   }
 
@@ -201,7 +193,8 @@ var SM = window.SM || (window.SM = {});
     Rn.drawNTRows(cnt, cnt.subarray(960), [0x70, 0x71, 0x72, 0x73], 0, 0, 240, ox, 0xFF);
     Rn.drawSprites([0x70, 0x71, 0x72, 0x73], ox);
     if (!(j & 0xC0)) return;
-    if (!ram[0x606]) return TI.start();                   // NO: reinicio
+    if (SM.Fade.busy()) return;
+    if (!ram[0x606]) return SM.Fade.go(TI.start);           // NO: reinicio
     ram[0xB3]--; ram[R.ACT] = 0; ram[R.LIVES] = 3;        // SÍ: acto 1 de la zona
     ram[R.MUSIC] = 0; ram[R.IRQMODE] = 2;
     SM.Game.startAct();

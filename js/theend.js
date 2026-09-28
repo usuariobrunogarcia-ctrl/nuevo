@@ -25,6 +25,7 @@ var SM = window.SM || (window.SM = {});
     ram[R.CHR2] = 0xF8; ram[R.CHR3] = 0xF9; ram[R.CHR4] = 0xFA; ram[R.CHR5] = 0xFB;
     ram[R.MUSIC] = 0x22;
     wait = 3;
+    SM.Fade.set(0);
     SM.Game.scene = step;
   };
 
@@ -77,6 +78,6 @@ var SM = window.SM || (window.SM = {});
     Rn.drawNTRows(nt, nt.subarray(960), [ram[R.CHR2], ram[R.CHR3], ram[R.CHR4], ram[R.CHR5]], 0, 0, 240, ox, 0xFF);
     Rn.drawSprites([ram[R.CHR0], ram[R.CHR0] + 1, ram[R.CHR1], ram[R.CHR1] + 1], ox);
     // el original queda aquí para siempre; en el port START vuelve al título (como un reset)
-    if (ram[R.JOYP] & 0x10) SM.Title.start();
+    if ((ram[R.JOYP] & 0x10) && !SM.Fade.busy()) SM.Fade.go(function () { SM.Title.start(); });
   }
 })();
