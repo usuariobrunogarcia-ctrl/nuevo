@@ -35,6 +35,7 @@ var SM = window.SM || (window.SM = {});
     for (var i = 0; i < 12; i++) ram[0x606 + i] = T(0x85FC + i);
     ram[R.IRQMODE] = 2;
     ram[0x86] = 0;
+    SM.Fade.set(0);
     ram[R.CHR0] = 0x70; ram[R.CHR2] = 0x70; ram[R.CHR3] = 0x71;
     ram[R.CHR1] = 0x72; ram[R.CHR4] = 0x72; ram[R.CHR5] = 0x72;
     SM.Game.scene = step;

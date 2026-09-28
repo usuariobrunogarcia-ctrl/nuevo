@@ -16,17 +16,14 @@ var SM = window.SM || (window.SM = {});
   };
 
   // ---------- paleta: $D4E1/$D557 ----------
+  // El juego oscurece la paleta en 4 pasos ($D5BF); en este port la paleta queda completa
+  // y el paso se traduce en un fundido a negro suave (SM.Fade), con el mismo ritmo.
   G.palStep = function () {
     var base = SM.rom.w(0x1E, 0xD5CC + ram[R.ZONE_P] * 2);
-    var mask = SM.rom.w(0x1E, 0xD5C8 + ram[0x332] * 2);
-    var sub = t30(0xD5BF + ram[0x333]);
-    for (var y = 0; y < 32; y++) {
-      var v;
-      if (t30(mask + y) & 0x80) v = t30(base + y);
-      else { v = t30(base + y) - sub; if (v < 0) v = 0xFF; }
-      SM.Render.pal[y] = v & 0x3F;
-    }
+    for (var y = 0; y < 32; y++) SM.Render.pal[y] = t30(base + y) & 0x3F;
     SM.Render.mirrorPal();
+    var i = ram[0x333], dark = t30(0xD5BF + i) / 0x40;
+    SM.Fade.set(dark, i === 0 && SM.Fade.level > 0.5);
     ram[0x333]++;
   };
   G.palFade = function () {          // $D557: un paso cada 4 cuadros
@@ -158,7 +155,8 @@ var SM = window.SM || (window.SM = {});
   G.startAct = function () {
     resetVars();
     ram[0xEB] = 0;
-    SM.ZoneCard.start(function () {
+    SM.ZoneCard.start(function () { SM.Fade.go(begin); });
+    function begin() {
       SM.Level.init(SM.rom, ram[R.ZONE], ram[R.ACT]);
       SM.Terrain.reset();
       // $C3FA: estado inicial del sprite del jugador
@@ -175,7 +173,7 @@ var SM = window.SM || (window.SM = {});
       SM.Player.drawInitial();
       SM.S3.reset();
       G.scene = fadeIn;
-    });
+    }
   };
   // $D10F
   function resetVars() {
@@ -202,7 +200,8 @@ var SM = window.SM || (window.SM = {});
     nmi();
     SM.Spr.clear();
     ram[0x9D] = 1;
-    if (ram[R.JOYP] & 0x10) ram[0xEB] ^= 1;
+    // START: menú de pausa superpuesto (el original sólo detenía el juego con $EB)
+    if ((ram[R.JOYP] & 0x10) && !ram[0xB0] && !ram[0xB5] && !SM.Fade.busy()) { SM.Menu.pause(); return; }
     if (!ram[0xEB]) {
       if (ram[R.SEC_CNT] === 0) perSecond();
       if (SM.S3.enabled) SM.S3.update(); else SM.Player.update();
@@ -295,13 +294,19 @@ var SM = window.SM || (window.SM = {});
     switch (k) {
       case 1: SM.Title.continueScreen(); break;
       case 2: ram[R.MUSIC] = 0; G.startAct(); break;
-      case 3: SM.Title.start(); break;
+      case 3:                                    // sin vidas: al título (modo libre: al menú)
+        if (G.freeMode) SM.Menu.open('free'); else SM.Title.start();
+        break;
       case 4:
         SM.Results.start(function () {
-          // el port incluye sólo el Mundo 1 (Green Hill y su etapa especial): al pasar a
-          // la zona siguiente se muestra el final
-          if (ram[R.ZONE] !== 0 && ram[R.ZONE] !== 7) SM.TheEnd.start();
-          else G.startAct();
+          SM.Fade.go(function () {
+            // modo libre: se juega sólo el acto elegido
+            if (G.freeMode) return SM.Menu.open('free');
+            // el port incluye sólo el Mundo 1 (Green Hill y su etapa especial): al pasar a
+            // la zona siguiente se muestra el final
+            if (ram[R.ZONE] !== 0 && ram[R.ZONE] !== 7) SM.TheEnd.start();
+            else G.startAct();
+          });
         });
         break;
       case 5: SM.TheEnd.start(); break;

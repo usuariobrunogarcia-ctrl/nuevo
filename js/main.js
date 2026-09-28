@@ -36,6 +36,7 @@ var SM = window.SM || (window.SM = {});
     var s = JSON.parse(localStorage.getItem('somari-settings') || '{}');
     if (s) { settings.wide = !!s.wide; settings.s3 = !!s.s3; }
   } catch (e) {}
+  SM.settings = settings;
   function save() { try { localStorage.setItem('somari-settings', JSON.stringify(settings)); } catch (e) {} }
 
   function layout() {
@@ -51,18 +52,15 @@ var SM = window.SM || (window.SM = {});
     SM.Render.resize(W);
     SM.Game.wide = settings.wide;
     var scale = Math.min(ww / W, wh / 240);
-    cv.style.width = Math.floor(W * scale) + 'px';
-    cv.style.height = Math.floor(240 * scale) + 'px';
-    var b = document.getElementById('aspect');
-    if (b) b.textContent = settings.wide ? 'Vista: panorámica (' + W + '×240)' : 'Vista: original (256×240)';
+    var st = document.getElementById('stage');
+    st.style.width = Math.floor(W * scale) + 'px';
+    st.style.height = Math.floor(240 * scale) + 'px';
+    if (SM.Menu && SM.Menu.onLayout) SM.Menu.onLayout();
   }
   SM.toggleWide = function () { settings.wide = !settings.wide; save(); layout(); };
 
   // ---- física: original de Somari o mejorada (port de Sonic 3) ----
-  function physicsLabel() {
-    var b = document.getElementById('physics');
-    if (b) b.textContent = settings.s3 ? 'Física: Sonic 3' : 'Física: original';
-  }
+  function physicsLabel() {}
   SM.setPhysics = function (on) {
     settings.s3 = !!on;
     if (settings.s3 && !SM.S3.enabled && SM.Level.layout) SM.S3.reset();
@@ -82,9 +80,10 @@ var SM = window.SM || (window.SM = {});
     while (acc >= STEP && n < 4) {
       SM.Game.joy = keys | touch | padState();
       if (SM.Game.scene) SM.Game.scene();
+      SM.Fade.tick();
       acc -= STEP; n++;
     }
-    if (n) SM.Render.present();
+    if (n) { SM.Render.present(); SM.Fade.draw(); }
   }
 
   function begin(rom) {
@@ -126,10 +125,6 @@ var SM = window.SM || (window.SM = {});
 
   window.addEventListener('load', function () {
     bindTouch();
-    var ab = document.getElementById('aspect');
-    if (ab) ab.addEventListener('click', function () { SM.toggleWide(); });
-    var pb = document.getElementById('physics');
-    if (pb) pb.addEventListener('click', function () { SM.togglePhysics(); });
     SM.S3.enabled = settings.s3;
     physicsLabel();
     SM.loadRom(begin, function (useFile) {
