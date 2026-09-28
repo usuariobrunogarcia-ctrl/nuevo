@@ -641,7 +641,8 @@ var SM = window.SM || (window.SM = {});
     ram[R.STATE] = st;
     var f = feet();
     rotation();
-    var fy = f[1] + (P.onObj ? 1 : 0);
+    // sobre un objeto se informa 1 px más abajo para que el objeto vuelva a sostenerlo
+    var bias = P.onObj ? 1 : 0, fy = f[1] + bias;
     if (fy < 0) fy = 0;
     var fx = f[0] & 0xFFFF;
     ram[R.NX_HI] = fx >> 8; ram[R.NX_LO] = fx & 0xFF;
@@ -660,7 +661,7 @@ var SM = window.SM || (window.SM = {});
     ram[R.PFLAGS] = fl;
     ram[R.PFLAGS2] = (ram[R.PFLAGS2] & 0xFB) | (P.roll || P.spindash ? 4 : 0);
     ram[R.COL_8B] = P.layer;
-    last = { nx: fx, ny: fy, fl: fl, vs: ram[R.VSPD], st: st, hurt: ram[R.HURT] };
+    last = { nx: fx, ny: fy, bias: bias, fl: fl, vs: ram[R.VSPD], st: st, hurt: ram[R.HURT], cd: ram[0xCD] };
   }
   function animState() {
     var st;
@@ -711,17 +712,27 @@ var SM = window.SM || (window.SM = {});
   // Cambios hechos por objetos, jefe o cámara desde el último cuadro
   function syncIn() {
     if (!last) return;
-    var f = readFeet(), dx = f[0] - last.nx, dy = f[1] - last.ny;
+    var f = readFeet(), dx = f[0] - last.nx, raw = f[1] - last.ny, dy = raw + last.bias;
     if (dx > 0x8000) dx -= 0x10000; else if (dx < -0x8000) dx += 0x10000;
     var st = ram[R.STATE], fl = ram[R.PFLAGS];
     var wasOnObj = P.onObj;
     P.onObj = false;
     if (dx) {
       addX(dx);
-      if ((dx > 0 && P.xv < 0) || (dx < 0 && P.xv > 0)) { P.xv = 0; if (!P.air) P.gv = 0; }
+      // empujado contra su movimiento (monitor, límite de la cámara); el arrastre de 1 px
+      // de una plataforma no lo frena
+      if ((Math.abs(dx) > 1 || st === 0x0D) && ((dx > 0 && P.xv < 0) || (dx < 0 && P.xv > 0))) {
+        P.xv = 0; if (!P.air) P.gv = 0;
+      }
       if (st === 0x0D) P.push = true;
     }
     if (dy) addY(dy);
+    // golpe al jefe ($9861): rebota
+    if (ram[0xCD] === 0x32 && last.cd !== 0x32) {
+      P.xv = -P.xv; P.gv = -P.gv;
+      if (P.air && P.yv > 0) P.yv = -P.yv;
+      return;
+    }
     // daño
     if (st === 0x0A && last.st !== 0x0A) {
       P.hurt = true; P.air = true; P.roll = false; P.spindash = false; P.jumping = false;
@@ -739,7 +750,7 @@ var SM = window.SM || (window.SM = {});
       return;
     }
     // un objeto lo sostiene (monitor, plataforma): corrigió la altura y anuló la caída
-    if (dy < 0 && ram[R.VSPD] === 0 && (P.air ? P.yv >= 0 : wasOnObj)) {
+    if (raw < 0 && ram[R.VSPD] === 0 && (P.air ? P.yv >= 0 : wasOnObj)) {
       if (P.air) { P.gv = P.xv; P.yv = 0; P.angle = 0; touchFloorSpin(); }
       P.onObj = true;
       return;
